@@ -101,7 +101,7 @@
         />
         <div class="floated label">
           <img
-            src="track-it-logo.png"
+            src="icons/shaka-favicon.jpeg"
             alt="Track it!"
             style="height: 40px; margin-top: 3px; display: inline-block"
           />
@@ -174,22 +174,7 @@
             />
           </div>
         </div>
-        <a
-          v-if="$q.platform.is.desktop"
-          href="https://github.com/flespi-software/TrackIt/"
-          target="_blank"
-        >
-          <q-btn
-            flat
-            round
-            color="bg-grey-9"
-            :class="[needShowTelemetry ? 'github' : 'telemetry']"
-            class="floated white-background"
-          >
-            <img style="height: 30px" src="GitHub-Mark-32px.png" alt="GitHub" />
-            <q-tooltip>Show on GitHub</q-tooltip>
-          </q-btn>
-        </a>
+
         <q-btn
           small
           round
@@ -846,9 +831,7 @@ export default defineComponent({
   &.menu
     top: 5px
     left: 10px
-  &.github
-    top: 5px
-    right: 100px
+
   &.telemetry
     top: 5px
     right: 55px

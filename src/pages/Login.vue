@@ -1,12 +1,6 @@
 <template>
   <div class="login-page window-height window-width bg-light column items-center no-wrap">
-    <a
-      v-if="!$q.platform.is.mobile || !$q.platform.within.iframe"
-      href="https://github.com/flespi-software/TrackIt/"
-      target="_blank"
-    >
-      <img class="login-github-link" src="right-graphite@2x.png" alt="Fork me on GitHub" />
-    </a>
+
     <div class="login-back flex items-center justify-center">
       <div class="login-code flex items-center justify-center">Track it!</div>
     </div>
@@ -166,13 +160,7 @@ export default defineComponent({
 .row__wrapper
   height: 80px
 .login-page
-  .login-github-link
-    position: absolute
-    top: 0
-    right: 0
-    border: 0
-    width: 149px
-    height: 149px
+
   .login-back
     width: 100%
     height: 50vh
@@ -188,7 +176,7 @@ export default defineComponent({
       height: 50vh
       width: 80vw
       max-width: 600px
-      background-image: url(/trackit.png)
+      background-image: url(/icons/shaka-favicon.jpeg)
       background-position: center
       background-size: contain
       background-repeat: no-repeat
