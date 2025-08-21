@@ -56,7 +56,8 @@ export default defineConfig((ctx) => {
       // distDir
 
       extendViteConf(config) {
-        config.base = './'
+        // Use absolute paths for production deployment
+        config.base = process.env.NODE_ENV === 'production' ? '/' : './'
         config.optimizeDeps = mergeConfig(
           config.optimizeDeps,
           {

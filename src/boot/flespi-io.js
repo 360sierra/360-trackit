@@ -4,10 +4,18 @@ import { boot } from 'quasar/wrappers'
 import axios from 'axios'
 
 async function getRegion() {
-  const host =
-    window.location.hostname.indexOf('flespi.io') > -1
-      ? window.location.hostname
-      : window.location.hostname + ':9005'
+  console.log('[flespi-io boot] Starting region detection')
+  
+  // In production (Vercel), always use flespi.io
+  // Only use localhost:9005 for local development
+  const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+  const host = isLocalhost ? 'localhost:9005' : 'flespi.io'
+  
+  console.log('[flespi-io boot] Environment detected:', { 
+    hostname: window.location.hostname, 
+    isLocalhost, 
+    selectedHost: host 
+  })
   let api
   try {
     api = await axios.get(`https://${host}/auth/regions`, {})
