@@ -106,8 +106,6 @@
             style="height: 40px; margin-top: 3px; display: inline-block"
           />
           <div class="q-toolbar-title" style="color: rgb(51, 51, 51); display: inline-block">
-            Track it! <sup>{{ version }}</sup>
-            <div class="q-toolbar-subtitle">Find yourself</div>
           </div>
         </div>
         <q-btn
@@ -284,7 +282,7 @@ import { useDevicesStore } from 'src/stores/devices'
 import { useAuthStore } from 'src/stores/auth'
 import { useMiscStore } from 'src/stores/misc'
 import { useTelemetryStore } from 'src/stores/telemetry'
-import dist from '../../package.json'
+
 
 export default defineComponent({
   name: 'MainLayout',
@@ -332,7 +330,6 @@ export default defineComponent({
         opened: false,
       },
       unsubscribeDevices: () => {},
-      version: dist.version,
     }
   },
   computed: {

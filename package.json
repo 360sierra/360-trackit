@@ -14,6 +14,8 @@
     "deploy": "rm -rf dist && npm run build && rm -rf deploy && mkdir deploy && cp -R dist/spa/* misc LICENSE package.json deploy && cp README.md deploy/README.md && node_modules/git-directory-deploy/bin/git-directory-deploy.sh -ddeploy -bgh-pages -rgit@git.gurtam.net:flespi/frontend/TrackIt.git && rm -rf deploy && git push github gh-pages"
   },
   "dependencies": {
+    "@mui/icons-material": "^7.3.1",
+    "@mui/material": "^7.3.1",
     "@quasar/extras": "^1.17.0",
     "axios": "^1.9.0",
     "datetimerangepicker": "github:flespi-software/DateTimeRangePicker",
