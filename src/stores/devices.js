@@ -11,6 +11,8 @@ export const useDevicesStore = defineStore('devices', {
     activeDevicesIDs: [], // the list of active devices' ids
     devicesColors: {}, // devices' colors map
     devicesInitialized: false, // devices initialized flag
+    selectedDevicesIDs: [], // the list of selected devices' ids for multi-select
+    multiSelectMode: false, // multi-select mode toggle
   }),
   getters: {
     getDeviceById: (state) => {
@@ -275,6 +277,40 @@ export const useDevicesStore = defineStore('devices', {
           break
         }
       }
+    },
+    // Multi-select actions
+    toggleMultiSelectMode() {
+      this.multiSelectMode = !this.multiSelectMode
+      if (!this.multiSelectMode) {
+        // Clear selections when exiting multi-select mode
+        this.selectedDevicesIDs = []
+      }
+    },
+    toggleDeviceSelection(deviceId) {
+      const index = this.selectedDevicesIDs.indexOf(deviceId)
+      if (index > -1) {
+        // Device is selected, remove it
+        this.selectedDevicesIDs.splice(index, 1)
+      } else {
+        // Device is not selected, add it
+        this.selectedDevicesIDs.push(deviceId)
+      }
+    },
+    selectAllActiveDevices() {
+      this.selectedDevicesIDs = [...this.activeDevicesIDs]
+    },
+    clearAllSelections() {
+      this.selectedDevicesIDs = []
+    },
+    addSelectedDevicesToActive() {
+      // Add all selected devices to active devices if they're not already active
+      this.selectedDevicesIDs.forEach(deviceId => {
+        if (!this.activeDevicesIDs.includes(deviceId)) {
+          this.activeDevicesIDs.push(deviceId)
+        }
+      })
+      // Sync to local storage
+      miscStore.setToStore({ store: LocalStorage, name: 'active', value: this.activeDevicesIDs })
     },
   },
 })

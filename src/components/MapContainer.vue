@@ -125,6 +125,35 @@ export default defineComponent({
   methods: {
     ...mapActions(useDevicesStore, ['getInitDataByDeviceId', 'updateDeviceColor']),
     ...mapActions(useMiscStore, ['getMessagesStore']),
+    addBlackRockCityGeofence() {
+      // Black Rock City coordinates
+      const blackRockCity = [40.7864, -119.2065]
+      // 20 miles in meters (1 mile = 1609.34 meters)
+      const radiusInMeters = 20 * 1609.34
+
+      // Create the geofence circle
+      this.geofenceCircle = L.circle(blackRockCity, {
+        color: '#ff6b35',
+        fillColor: '#ff6b35',
+        fillOpacity: 0.1,
+        radius: radiusInMeters,
+        weight: 2,
+        opacity: 0.8,
+        dashArray: '10, 10'
+      }).addTo(this.map)
+
+      // Add a popup to show information
+      this.geofenceCircle.bindPopup(`
+        <div style="text-align: center;">
+          <strong>Black Rock City Geofence</strong><br>
+          <small>Radius: 20 miles</small><br>
+          <small>Coordinates: ${blackRockCity[0]}, ${blackRockCity[1]}</small>
+        </div>
+      `)
+
+      // Store reference for potential removal later
+      this.blackRockCityGeofence = this.geofenceCircle
+    },
     addFlags(id) {
       if (!this.markers[id]) {
         return false
@@ -589,6 +618,9 @@ export default defineComponent({
           ],
           layers: [osm],
         })
+
+        // Add Black Rock City geofence (20 miles radius)
+        this.addBlackRockCityGeofence()
 
         // Map is ready for track initialization
         this.map.addEventListener('zoom', (e) => {
@@ -1535,6 +1567,8 @@ export default defineComponent({
     ;(this.map = null), // map instance
       (this.markers = {}), // markers on map
       (this.tracks = {}), // tracks on map
+      (this.geofenceCircle = null), // geofence circle
+      (this.blackRockCityGeofence = null), // Black Rock City geofence reference
       /* create debounced function for processing messages and telemetry */
       (this.debouncedUpdateStateByMessages = debounce(this.updateStateByMessages, 100))
     this.debouncedUpdateStateByTelemetry = debounce(this.updateStateByTelemetry, 5)

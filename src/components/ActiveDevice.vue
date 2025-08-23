@@ -27,6 +27,8 @@
     >
       #{{ device.id }}
     </div>
+    
+
     <q-item-section side style="position: relative">
       <q-icon size="1.7rem" name="mdi-developer-board" />
       <div
@@ -70,7 +72,7 @@
 
 <script>
 import { defineComponent } from 'vue'
-import { mapActions } from 'pinia'
+import { mapActions, mapState } from 'pinia'
 import ColorModal from './ColorModal.vue'
 import { useDevicesStore } from '../stores/devices'
 
@@ -102,6 +104,7 @@ export default defineComponent({
         this.updateDeviceColor(this.device.id, color)
       },
     },
+
   },
   methods: {
     ...mapActions(useDevicesStore, ['removeActiveDevice', 'updateDeviceColor']),

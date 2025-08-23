@@ -23,6 +23,7 @@
     >
       #{{ device.id }}
     </div>
+    
     <q-item-section side style="position: relative">
       <q-icon size="1.7rem" name="mdi-developer-board" />
     </q-item-section>
@@ -31,11 +32,22 @@
         device.name || '&lt;noname&gt;'
       }}</q-item-label>
     </q-item-section>
+    
+    <!-- Multi-select checkbox - positioned like the remove button -->
+    <q-item-section v-if="multiSelectMode" side class="text-center" style="min-width: 40px">
+      <q-checkbox
+        :model-value="isDeviceSelected"
+        @update:model-value="toggleDeviceSelection(device.id)"
+        @click.stop
+        color="primary"
+        size="sm"
+      />
+    </q-item-section>
   </q-item>
 </template>
 
 <script>
-import { mapActions } from 'pinia'
+import { mapActions, mapState } from 'pinia'
 import { defineComponent } from 'vue'
 import { useDevicesStore } from '../stores/devices'
 
@@ -46,8 +58,17 @@ export default defineComponent({
   data() {
     return {}
   },
+  computed: {
+    ...mapState(useDevicesStore, {
+      multiSelectMode: 'multiSelectMode',
+      selectedDevicesIDs: 'selectedDevicesIDs',
+    }),
+    isDeviceSelected() {
+      return this.selectedDevicesIDs.includes(this.device.id)
+    },
+  },
   methods: {
-    ...mapActions(useDevicesStore, ['addActiveDevice']),
+    ...mapActions(useDevicesStore, ['addActiveDevice', 'toggleDeviceSelection']),
     deviceClickHandler() {
       /* inactive device was clicked */
       /* add the device into the list of active devices */
