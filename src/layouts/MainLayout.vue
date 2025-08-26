@@ -229,20 +229,7 @@
                   <q-tooltip>Display cars' names on the map</q-tooltip>
                 </q-toggle>
               </q-item>
-              <q-item dense v-if="!needHideInvalidInMenu">
-                <q-toggle
-                  v-model="params.needShowInvalidPositionMessages"
-                  icon="mdi-map-marker-off"
-                  label="Draw invalid"
-                  :disable="!devices.length"
-                  @update:model-value="paramsChangeHandler"
-                >
-                  <q-tooltip
-                    >Use messages with position.valid=false to display cars' positions on the
-                    map</q-tooltip
-                  >
-                </q-toggle>
-              </q-item>
+
               <q-item class="within-iframe-hide" @click="exitHandler" clickable>
                 <q-item-section avatar class="q-pl-md">
                   <q-icon name="mdi-exit-to-app" />
@@ -312,14 +299,14 @@ export default defineComponent({
       needShowTelemetry: true,
       needShowDaterange: true,
       needHideNamesInMenu: false,
-      needHidePlayerInMenu: false,
+      needHidePlayerInMenu: true,
       needHideMessagesInMenu: false,
-      needHideInvalidInMenu: false,
+      needHideInvalidInMenu: true,
       params: {
         needShowMessages: false,
         needShowInvalidPositionMessages: false,
         needShowNamesOnMap: true,
-        needShowPlayer: true,
+        needShowPlayer: false,
       },
       selectedDevice: {
         id: null,

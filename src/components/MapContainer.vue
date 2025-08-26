@@ -328,6 +328,7 @@ export default defineComponent({
       if (!id) {
         return
       }
+      console.log(`🚀 getDeviceData called for device ${id}`)
       const deviceMessagesStore = this.messagesStores[id]
       if (deviceMessagesStore.realtimeEnabled) {
         await deviceMessagesStore.unsubscribePooling()
@@ -335,9 +336,12 @@ export default defineComponent({
       deviceMessagesStore.clearMessages()
       const from = this.date[0]
       const to = this.date[1]
+      console.log(`📅 Setting date range: ${new Date(from)} to ${new Date(to)}`)
       deviceMessagesStore.setTimestampFrom(from)
       deviceMessagesStore.setTimestampTo(to)
+      console.log(`📡 Calling deviceMessagesStore.get()...`)
       await deviceMessagesStore.get()
+      console.log(`📊 Messages loaded: ${deviceMessagesStore.messages.length}`)
       if (to > Date.now()) {
         const render = await deviceMessagesStore.pollingGet()
         render()
@@ -345,15 +349,19 @@ export default defineComponent({
       this.removeFlags(id)
       this.addFlags(id)
       if (!deviceMessagesStore.messages.length) {
+        console.log(`⚠️ No messages found, trying telemetry for device ${id}`)
         try {
           /* try to init device by telemetry */
           this.devicesStates[id].telemetryAccess = true
           await this.getInitDataByDeviceId([id, this.params.needShowInvalidPositionMessages])
         } catch (err) {
+          console.log(`❌ Telemetry error for device ${id}:`, err)
           if (err.response && err.response.status && err.response.status === 403) {
             this.devicesStates[id].telemetryAccess = false
           }
         }
+      } else {
+        console.log(`✅ Messages loaded successfully for device ${id}`)
       }
       /* device initialization is completed - device is initialized either from messages or from telemetry */
       this.devicesStates[id].initStatus = true
@@ -1464,6 +1472,16 @@ export default defineComponent({
       this.activeDevicesIDs.forEach(async (id) => {
         if (this.devicesStates[id].initStatus === true) {
           await this.getDeviceData(id)
+        } else {
+          // Wait for device to be initialized
+          const checkInit = () => {
+            if (this.devicesStates[id]?.initStatus === true) {
+              this.getDeviceData(id)
+            } else {
+              setTimeout(checkInit, 100)
+            }
+          }
+          setTimeout(checkInit, 100)
         }
       })
     },

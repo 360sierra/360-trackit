@@ -32,17 +32,7 @@
         device.name || '&lt;noname&gt;'
       }}</q-item-label>
     </q-item-section>
-    
-    <!-- Multi-select checkbox - positioned like the remove button -->
-    <q-item-section v-if="multiSelectMode" side class="text-center" style="min-width: 40px">
-      <q-checkbox
-        :model-value="isDeviceSelected"
-        @update:model-value="toggleDeviceSelection(device.id)"
-        @click.stop
-        color="primary"
-        size="sm"
-      />
-    </q-item-section>
+
   </q-item>
 </template>
 
@@ -59,16 +49,10 @@ export default defineComponent({
     return {}
   },
   computed: {
-    ...mapState(useDevicesStore, {
-      multiSelectMode: 'multiSelectMode',
-      selectedDevicesIDs: 'selectedDevicesIDs',
-    }),
-    isDeviceSelected() {
-      return this.selectedDevicesIDs.includes(this.device.id)
-    },
+    ...mapState(useDevicesStore, {}),
   },
   methods: {
-    ...mapActions(useDevicesStore, ['addActiveDevice', 'toggleDeviceSelection']),
+    ...mapActions(useDevicesStore, ['addActiveDevice']),
     deviceClickHandler() {
       /* inactive device was clicked */
       /* add the device into the list of active devices */

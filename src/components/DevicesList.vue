@@ -54,69 +54,6 @@
         />
       </div>
       <div v-if="classifiedDevices.inactive.length" style="overflow: auto">
-        
-        <!-- Multi-select controls for INACTIVE devices -->
-        <q-item class="bg-grey-8" style="min-height: 60px">
-          <q-item-section side style="min-width: 40px">
-            <q-icon
-              :name="multiSelectMode ? 'mdi-checkbox-multiple-marked' : 'mdi-checkbox-multiple-blank-outline'"
-              :color="multiSelectMode ? 'primary' : 'grey-5'"
-              size="1.2rem"
-              @click="toggleMultiSelectMode"
-              class="cursor-pointer"
-            >
-              <q-tooltip>{{ multiSelectMode ? 'Exit Multi-Select' : 'Multi-Select Mode' }}</q-tooltip>
-            </q-icon>
-          </q-item-section>
-          
-          <q-item-section>
-            <q-item-label class="text-grey-4" style="font-size: 0.9rem">
-              {{ multiSelectMode ? `${selectedDevicesIDs.length} devices selected` : 'Multi-select inactive devices' }}
-            </q-item-label>
-          </q-item-section>
-          
-          <template v-if="multiSelectMode">
-            <q-item-section side class="text-center">
-              <q-icon
-                name="mdi-select-all"
-                color="positive"
-                size="1.1rem"
-                @click="selectAllInactiveDevices"
-                :class="{ 'text-grey-7': selectedDevicesIDs.length === classifiedDevices.inactive.length }"
-                class="cursor-pointer"
-              >
-                <q-tooltip>Select All Inactive</q-tooltip>
-              </q-icon>
-            </q-item-section>
-            
-            <q-item-section side class="text-center">
-              <q-icon
-                name="mdi-select-off"
-                color="negative"
-                size="1.1rem"
-                @click="clearAllSelections"
-                :class="{ 'text-grey-7': selectedDevicesIDs.length === 0 }"
-                class="cursor-pointer"
-              >
-                <q-tooltip>Clear All</q-tooltip>
-              </q-icon>
-            </q-item-section>
-            
-            <q-item-section side class="text-center">
-              <q-icon
-                name="mdi-plus-circle"
-                color="primary"
-                size="1.1rem"
-                @click="addSelectedToActive"
-                :class="{ 'text-grey-7': selectedDevicesIDs.length === 0 }"
-                class="cursor-pointer"
-              >
-                <q-tooltip>Add Selected to Monitoring</q-tooltip>
-              </q-icon>
-            </q-item-section>
-          </template>
-        </q-item>
-        
         <q-item :style="{ height: `${devicesFilterHeight}px!important` }" style="padding-top: 20px">
           <q-item-section>
             <div class="q-px-none">
@@ -248,34 +185,12 @@ export default defineComponent({
       })
       return filteredItems
     },
-    ...mapState(useDevicesStore, {
-      multiSelectMode: 'multiSelectMode',
-      selectedDevicesIDs: 'selectedDevicesIDs',
-    }),
+    ...mapState(useDevicesStore, {}),
   },
   methods: {
     ...mapActions(useDevicesStore, [
-      'toggleMultiSelectMode',
-      'selectAllActiveDevices', 
-      'clearAllSelections',
-      'toggleDeviceSelection',
       'addActiveDevice'
     ]),
-    selectAllInactiveDevices() {
-      // Select all inactive devices only
-      const inactiveDeviceIds = this.classifiedDevices.inactive.map(device => device.id)
-      this.selectedDevicesIDs.splice(0, this.selectedDevicesIDs.length, ...inactiveDeviceIds)
-    },
-    addSelectedToActive() {
-      // Add all selected devices to active monitoring
-      this.selectedDevicesIDs.forEach(deviceId => {
-        if (!this.activeDevicesIDs.includes(deviceId)) {
-          this.addActiveDevice(deviceId)
-        }
-      })
-      // Clear selections after adding
-      this.clearAllSelections()
-    },
     deviceRemovedHandler() {
       /* device is moved from the active list to the inactive list */
       /* increase the height of inactive devices list by adding height of one list item, in order to prevent blinking */
