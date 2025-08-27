@@ -981,21 +981,23 @@ export default defineComponent({
         // Add Black Rock City geofence (20 miles radius)
         this.addBlackRockCityGeofence()
 
-        // Initialize harsh events cluster group
+        // Initialize harsh events cluster group with strict clustering
         this.harshEventsCluster = L.markerClusterGroup({
-          maxClusterRadius: 80, // Cluster markers within 80px
-          disableClusteringAtZoom: 15, // Disable clustering at zoom level 15 and above
+          maxClusterRadius: function(zoom) {
+            // Reduce cluster radius as zoom increases to prevent single marker clustering
+            return zoom < 10 ? 80 : zoom < 12 ? 60 : 40
+          },
+          disableClusteringAtZoom: 14, // Disable clustering at zoom level 14 and above
           spiderfyOnMaxZoom: true,
           showCoverageOnHover: false,
           zoomToBoundsOnClick: true,
-          singleMarkerMode: false, // Don't cluster single markers
+          chunkedLoading: true,
+          // Only cluster when there are actually multiple markers
           iconCreateFunction: function(cluster) {
             const count = cluster.getChildCount()
             
-            // Only create cluster icon if there are actually multiple markers
-            if (count <= 1) {
-              return null // Let individual markers show their own icons
-            }
+            // Debug: log cluster creation
+            console.log(`🔍 Creating cluster with ${count} markers`)
             
             let className = 'marker-cluster-small'
             if (count > 10) {
