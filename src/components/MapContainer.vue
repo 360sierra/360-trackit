@@ -2531,6 +2531,7 @@ export default defineComponent({
   text-align: center;
   border-radius: 50%;
   background-color: rgba(255, 255, 255, 0.9);
+  animation: pulse 2s infinite;
 }
 
 .marker-cluster span {
@@ -2542,6 +2543,12 @@ export default defineComponent({
 /* Cluster hover effects for better interactivity */
 .marker-cluster:hover {
   cursor: pointer;
+}
+
+.marker-cluster:hover div {
+  transform: scale(1.05);
+  transition: transform 0.2s ease-in-out;
+  box-shadow: 0 0 10px rgba(255, 193, 7, 0.6);
 }
 
 /* Harsh event marker styling */
