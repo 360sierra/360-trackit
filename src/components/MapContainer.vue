@@ -465,6 +465,7 @@ export default defineComponent({
       }
       this.removeFlags(id)
       this.addFlags(id)
+      this.addHarshEventMarkers(id)
       if (!deviceMessagesStore.messages.length) {
         console.log(`⚠️ No messages found, trying telemetry for device ${id}`)
         try {
@@ -559,14 +560,14 @@ export default defineComponent({
 
       const segments = []
       let currentSegment = [messages[0]]
-      const firstSpeed = messages[0]['position.speed'] || null
+      const firstSpeed = this.normalizeSpeedToKmh(messages[0]['position.speed'], 'position.speed')
       let currentStyle = this.getSegmentStyle(id, false, firstSpeed) // First segment with speed
 
       for (let i = 1; i < messages.length; i++) {
         const currentMessage = messages[i]
         const prevMessage = messages[i - 1]
         const shouldBeDashed = this.shouldUseDashedLine(currentMessage, prevMessage)
-        const currentSpeed = currentMessage['position.speed'] || null
+        const currentSpeed = this.normalizeSpeedToKmh(currentMessage['position.speed'], 'position.speed')
         const newStyle = this.getSegmentStyle(id, shouldBeDashed, currentSpeed)
         
         // If style changes, finish current segment and start new one
@@ -632,6 +633,23 @@ export default defineComponent({
           color: segmentColor,
           opacity: 1
         }
+      }
+    },
+    normalizeSpeedToKmh(rawSpeed, fieldName = 'unknown') {
+      // Auto-detect if speed is in m/s or km/h and normalize to km/h
+      if (rawSpeed === null || rawSpeed === undefined) {
+        return null
+      }
+      
+      // If speed > 200, it's likely already in km/h (unrealistic m/s for vehicles)
+      // If speed < 200, assume it's in m/s and convert
+      if (rawSpeed > 200) {
+        console.log(`Speed from ${fieldName} detected as km/h:`, rawSpeed)
+        return rawSpeed
+      } else {
+        const convertedSpeed = rawSpeed * 3.6
+        console.log(`Speed from ${fieldName} converted from m/s to km/h:`, rawSpeed, '→', convertedSpeed)
+        return convertedSpeed
       }
     },
     getSpeedBasedColor(speed) {
@@ -1190,7 +1208,9 @@ export default defineComponent({
     },
     removeMarker(id) {
       if (this.markers[id] && this.markers[id] instanceof L.Marker) {
-        this.removeFlags(id)
+        // Use the comprehensive cleanup method
+        this.clearAllMarkersForDevice(id)
+        
         this.map.removeLayer(this.markers[id].accuracy)
         this.markers[id].remove()
 
@@ -1305,11 +1325,11 @@ export default defineComponent({
         console.log('Using can.speed:', message['can.speed'])
       } else if (message['position.speed'] !== undefined) {
         // Fallback to GPS speed if CAN speed not available
-        speedKmh = Math.round(message['position.speed'] * 3.6 * 10) / 10 // Convert m/s to km/h
+        const normalizedSpeed = this.normalizeSpeedToKmh(message['position.speed'], 'position.speed')
+        speedKmh = Math.round(normalizedSpeed * 10) / 10
         speedMph = Math.round(speedKmh * 0.621371 * 10) / 10
         speedColor = this.getSpeedBasedColor(speedKmh)
-        speedSource = 'GPS Speed'
-        console.log('Using position.speed (GPS):', message['position.speed'], 'm/s')
+        speedSource = message['position.speed'] > 200 ? 'GPS Speed (km/h)' : 'GPS Speed (m/s→km/h)'
       }
       
       console.log('Final speed values:', { speedKmh, speedMph, speedSource })
@@ -1349,6 +1369,282 @@ export default defineComponent({
         autoClose: true,
         closeOnClick: true,
         className: 'track-point-popup'
+      })
+        .setLatLng(latlng)
+        .setContent(popupContent)
+        .openOn(this.map)
+    },
+    clearAllMarkersForDevice(id) {
+      // Clear start/end flags
+      this.removeFlags(id)
+      
+      // Clear harsh event markers
+      if (this.markers[id] && this.markers[id].harshEvents) {
+        this.markers[id].harshEvents.forEach(marker => {
+          if (marker && this.map.hasLayer(marker)) {
+            this.map.removeLayer(marker)
+          }
+        })
+        this.markers[id].harshEvents = []
+      }
+      
+      // Close any open popups related to this device
+      if (this.map.trackPointPopup) {
+        this.map.closePopup(this.map.trackPointPopup)
+      }
+      if (this.map.harshEventPopup) {
+        this.map.closePopup(this.map.harshEventPopup)
+      }
+      
+      console.log(`🧹 Cleared all markers for device ${id}`)
+    },
+    addHarshEventMarkers(id) {
+      if (!this.messages[id] || !this.messages[id].length) {
+        return
+      }
+
+      // Initialize harsh events array for this device if not exists
+      if (!this.markers[id]) {
+        return
+      }
+      if (!this.markers[id].harshEvents) {
+        this.markers[id].harshEvents = []
+      }
+
+      // Clear existing harsh event markers
+      this.markers[id].harshEvents.forEach(marker => {
+        if (marker && this.map.hasLayer(marker)) {
+          this.map.removeLayer(marker)
+        }
+      })
+      this.markers[id].harshEvents = []
+
+      // Debug: Log available fields in first message to help identify harsh event fields
+      if (this.messages[id].length > 0) {
+        const sampleMessage = this.messages[id][0]
+        const allFields = Object.keys(sampleMessage)
+        const potentialHarshFields = allFields.filter(key => 
+          key.includes('harsh') || 
+          key.includes('event') || 
+          key.includes('acceleration') || 
+          key.includes('braking') || 
+          key.includes('cornering') ||
+          key.includes('driver') ||
+          key.includes('behavior')
+        )
+        console.log(`🔍 Sample message fields for device ${id}:`, allFields)
+        console.log(`🚨 Potential harsh event fields:`, potentialHarshFields)
+      }
+
+      // Search for harsh driving events in messages
+      this.messages[id].forEach((message, index) => {
+        const harshEvents = this.detectHarshEvents(message)
+        
+        harshEvents.forEach(event => {
+          if (message['position.latitude'] && message['position.longitude']) {
+            const marker = L.marker([message['position.latitude'], message['position.longitude']], {
+              icon: this.generateHarshEventIcon(event.type),
+              zIndexOffset: 1000 // Ensure harsh events appear above other markers
+            })
+
+            // Add click handler for harsh event details
+            marker.on('click', () => {
+              this.showHarshEventPopup([message['position.latitude'], message['position.longitude']], message, event)
+            })
+
+            // Add to map and store reference
+            marker.addTo(this.map)
+            this.markers[id].harshEvents.push(marker)
+          }
+        })
+      })
+
+      console.log(`🚨 Added ${this.markers[id].harshEvents.length} harsh event markers for device ${id}`)
+    },
+    detectHarshEvents(message) {
+      const events = []
+      
+      // Check for various harsh driving event field patterns
+      // Common field names in telemetry systems
+      const harshFields = [
+        // Standard harsh event fields
+        { pattern: 'harsh.acceleration', type: 'acceleration' },
+        { pattern: 'harsh.braking', type: 'braking' },
+        { pattern: 'harsh.cornering', type: 'cornering' },
+        { pattern: 'harsh.turning', type: 'cornering' },
+        
+        // Alternative field patterns
+        { pattern: 'event.harsh.acceleration', type: 'acceleration' },
+        { pattern: 'event.harsh.braking', type: 'braking' },
+        { pattern: 'event.harsh.cornering', type: 'cornering' },
+        
+        // CAN-based harsh events
+        { pattern: 'can.harsh.acceleration', type: 'acceleration' },
+        { pattern: 'can.harsh.braking', type: 'braking' },
+        { pattern: 'can.harsh.cornering', type: 'cornering' },
+        
+        // Driver behavior events
+        { pattern: 'driver.harsh.acceleration', type: 'acceleration' },
+        { pattern: 'driver.harsh.braking', type: 'braking' },
+        { pattern: 'driver.harsh.cornering', type: 'cornering' },
+        
+        // Generic event fields
+        { pattern: 'event.acceleration', type: 'acceleration' },
+        { pattern: 'event.braking', type: 'braking' },
+        { pattern: 'event.cornering', type: 'cornering' }
+      ]
+
+      // Check each possible field pattern
+      harshFields.forEach(field => {
+        if (message[field.pattern] !== undefined) {
+          // Event detected - check if it's actually a harsh event
+          const value = message[field.pattern]
+          
+          // Different systems may store events differently:
+          // - Boolean: true/false
+          // - Numeric: threshold values (e.g., > 0 means event occurred)
+          // - String: event descriptions
+          
+          let isHarshEvent = false
+          let severity = 'medium'
+          let details = ''
+
+          if (typeof value === 'boolean' && value === true) {
+            isHarshEvent = true
+            details = `${field.type} event detected`
+          } else if (typeof value === 'number' && value > 0) {
+            isHarshEvent = true
+            severity = value > 5 ? 'high' : value > 2 ? 'medium' : 'low'
+            details = `${field.type} intensity: ${value}`
+          } else if (typeof value === 'string' && value.length > 0) {
+            isHarshEvent = true
+            details = value
+          }
+
+          if (isHarshEvent) {
+            events.push({
+              type: field.type,
+              field: field.pattern,
+              value: value,
+              severity: severity,
+              details: details
+            })
+          }
+        }
+      })
+
+      return events
+    },
+    generateHarshEventIcon(eventType) {
+      // Different colors and symbols for different event types
+      const eventConfig = {
+        acceleration: {
+          color: '#FF4444', // Red
+          symbol: '⚡', // Lightning bolt for acceleration
+          bgColor: '#FFEEEE'
+        },
+        braking: {
+          color: '#FF8800', // Orange
+          symbol: '🛑', // Stop sign for braking
+          bgColor: '#FFF4EE'
+        },
+        cornering: {
+          color: '#8844FF', // Purple
+          symbol: '🔄', // Curved arrow for cornering
+          bgColor: '#F4EEFF'
+        }
+      }
+
+      const config = eventConfig[eventType] || eventConfig.acceleration
+
+      return L.divIcon({
+        className: 'harsh-event-marker',
+        html: `
+          <div style="
+            width: 24px;
+            height: 24px;
+            background-color: ${config.bgColor};
+            border: 2px solid ${config.color};
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+            animation: pulse 2s infinite;
+          ">
+            ${config.symbol}
+          </div>
+        `,
+        iconSize: [24, 24],
+        iconAnchor: [12, 12]
+      })
+    },
+    showHarshEventPopup(latlng, message, event) {
+      // Close any existing popup
+      if (this.map.harshEventPopup) {
+        this.map.closePopup(this.map.harshEventPopup)
+      }
+
+      const timestamp = message.timestamp ? new Date(message.timestamp * 1000).toLocaleString() : 'N/A'
+      
+      // Get event type display name
+      const eventTypeNames = {
+        acceleration: 'Harsh Acceleration',
+        braking: 'Harsh Braking', 
+        cornering: 'Harsh Cornering'
+      }
+      
+      const eventTypeName = eventTypeNames[event.type] || 'Harsh Driving Event'
+      
+      // Get severity color
+      const severityColors = {
+        low: '#FFA500',    // Orange
+        medium: '#FF6600', // Red-Orange
+        high: '#FF0000'    // Red
+      }
+      
+      const severityColor = severityColors[event.severity] || '#FF6600'
+
+      const popupContent = `
+        <div style="min-width: 220px; font-family: Arial, sans-serif;">
+          <div style="font-weight: bold; margin-bottom: 8px; color: ${severityColor};">
+            🚨 ${eventTypeName}
+          </div>
+          <div style="margin-bottom: 6px;">
+            <strong>🕐 Time:</strong><br>
+            <span style="font-size: 12px; color: #666;">${timestamp}</span>
+          </div>
+          <div style="margin-bottom: 6px;">
+            <strong>⚠️ Severity:</strong><br>
+            <span style="color: ${severityColor}; font-weight: bold; text-transform: capitalize;">
+              ${event.severity}
+            </span>
+          </div>
+          <div style="margin-bottom: 6px;">
+            <strong>📊 Details:</strong><br>
+            <span style="font-size: 12px; color: #666;">
+              ${event.details}
+            </span>
+          </div>
+          <div style="margin-bottom: 6px;">
+            <strong>🔧 Data Source:</strong><br>
+            <span style="font-size: 10px; color: #999; font-style: italic;">
+              ${event.field}
+            </span>
+          </div>
+          <div style="font-size: 11px; color: #999; margin-top: 8px;">
+            Click elsewhere to close
+          </div>
+        </div>
+      `
+
+      // Create and show popup
+      this.map.harshEventPopup = L.popup({
+        closeButton: true,
+        autoClose: true,
+        closeOnClick: true,
+        className: 'harsh-event-popup'
       })
         .setLatLng(latlng)
         .setContent(popupContent)
@@ -1843,6 +2139,11 @@ export default defineComponent({
       this.player.status = 'stop'
       this.player.currentMsgTimestamp = null
       
+      // Clear all existing markers (flags, harsh events, etc.) before loading new data
+      this.activeDevicesIDs.forEach((id) => {
+        this.clearAllMarkersForDevice(id)
+      })
+      
       // Load data for all devices
       const dataLoadPromises = this.activeDevicesIDs.map(async (id) => {
         if (this.devicesStates[id].initStatus === true) {
@@ -2041,6 +2342,44 @@ export default defineComponent({
 .track-point-popup .leaflet-popup-tip {
   background: white;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Harsh event popup styling */
+.harsh-event-popup .leaflet-popup-content-wrapper {
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(255, 0, 0, 0.2);
+  border: 2px solid #FF6600;
+}
+
+.harsh-event-popup .leaflet-popup-content {
+  margin: 12px 16px;
+  line-height: 1.4;
+}
+
+.harsh-event-popup .leaflet-popup-tip {
+  background: white;
+  box-shadow: 0 2px 4px rgba(255, 0, 0, 0.1);
+}
+
+/* Harsh event marker styling */
+.harsh-event-marker {
+  cursor: pointer;
+}
+
+/* Pulse animation for harsh event markers */
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
 }
 </style>
 
