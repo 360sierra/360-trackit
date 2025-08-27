@@ -560,14 +560,16 @@ export default defineComponent({
 
       const segments = []
       let currentSegment = [messages[0]]
-      const firstSpeed = this.normalizeSpeedToKmh(messages[0]['position.speed'], 'position.speed')
+      const firstSpeedData = this.getSpeedFromMessage(messages[0], id)
+      const firstSpeed = firstSpeedData.kmh !== 'N/A' ? firstSpeedData.kmh : null
       let currentStyle = this.getSegmentStyle(id, false, firstSpeed) // First segment with speed
 
       for (let i = 1; i < messages.length; i++) {
         const currentMessage = messages[i]
         const prevMessage = messages[i - 1]
         const shouldBeDashed = this.shouldUseDashedLine(currentMessage, prevMessage)
-        const currentSpeed = this.normalizeSpeedToKmh(currentMessage['position.speed'], 'position.speed')
+        const currentSpeedData = this.getSpeedFromMessage(currentMessage, id)
+        const currentSpeed = currentSpeedData.kmh !== 'N/A' ? currentSpeedData.kmh : null
         const newStyle = this.getSegmentStyle(id, shouldBeDashed, currentSpeed)
         
         // If style changes, finish current segment and start new one
@@ -633,6 +635,100 @@ export default defineComponent({
           color: segmentColor,
           opacity: 1
         }
+      }
+    },
+    determineSpeedSourceForDevice(id) {
+      // Determine the speed source priority for the entire date range
+      // If ANY message has CAN speed data, use ONLY CAN for all points
+      // If NO message has CAN speed data, use ONLY GPS for all points
+      
+      if (!this.messages[id] || !this.messages[id].length) {
+        return 'gps' // Default to GPS if no messages
+      }
+      
+      // Check if ANY message in the range has CAN speed data
+      const hasCanSpeed = this.messages[id].some(message => 
+        message['can.vehicle.speed'] !== undefined ||
+        message['can.engine.speed'] !== undefined ||
+        message['can.speed'] !== undefined
+      )
+      
+      const speedSource = hasCanSpeed ? 'can' : 'gps'
+      console.log(`🎯 Speed source determined for device ${id}: ${speedSource.toUpperCase()} (${hasCanSpeed ? 'CAN data found' : 'No CAN data found'})`)
+      
+      return speedSource
+    },
+    getSpeedFromMessage(message, deviceId = null) {
+      // Get the global speed source for this device
+      const speedSource = deviceId ? this.determineSpeedSourceForDevice(deviceId) : 'auto'
+      
+      let speedKmh = 'N/A'
+      let speedMph = 'N/A'
+      let speedColor = '#666666'
+      let source = 'N/A'
+      
+      if (speedSource === 'can') {
+        // Use ONLY CAN speed data (priority: can.vehicle.speed > can.engine.speed > can.speed)
+        if (message['can.vehicle.speed'] !== undefined) {
+          speedKmh = Math.round(message['can.vehicle.speed'] * 10) / 10
+          source = 'CAN Vehicle Speed'
+          console.log('Using can.vehicle.speed:', message['can.vehicle.speed'])
+        } else if (message['can.engine.speed'] !== undefined) {
+          speedKmh = Math.round(message['can.engine.speed'] * 10) / 10
+          source = 'CAN Engine Speed'
+          console.log('Using can.engine.speed:', message['can.engine.speed'])
+        } else if (message['can.speed'] !== undefined) {
+          speedKmh = Math.round(message['can.speed'] * 10) / 10
+          source = 'CAN Speed'
+          console.log('Using can.speed:', message['can.speed'])
+        } else {
+          // No CAN data in this specific message, but device uses CAN globally
+          speedKmh = 'N/A'
+          source = 'CAN (No Data)'
+          console.log('No CAN speed data in this message')
+        }
+        
+        if (speedKmh !== 'N/A') {
+          speedMph = Math.round(speedKmh * 0.621371 * 10) / 10
+          speedColor = this.getSpeedBasedColor(speedKmh)
+        }
+        
+      } else if (speedSource === 'gps') {
+        // Use ONLY GPS speed data
+        if (message['position.speed'] !== undefined) {
+          const normalizedSpeed = this.normalizeSpeedToKmh(message['position.speed'], 'position.speed')
+          speedKmh = Math.round(normalizedSpeed * 10) / 10
+          speedMph = Math.round(speedKmh * 0.621371 * 10) / 10
+          speedColor = this.getSpeedBasedColor(speedKmh)
+          source = message['position.speed'] > 200 ? 'GPS Speed (km/h)' : 'GPS Speed (m/s→km/h)'
+          console.log('Using GPS speed:', message['position.speed'])
+        } else {
+          speedKmh = 'N/A'
+          source = 'GPS (No Data)'
+          console.log('No GPS speed data in this message')
+        }
+        
+      } else {
+        // Auto mode (fallback for compatibility)
+        if (message['can.vehicle.speed'] !== undefined) {
+          speedKmh = Math.round(message['can.vehicle.speed'] * 10) / 10
+          speedMph = Math.round(speedKmh * 0.621371 * 10) / 10
+          speedColor = this.getSpeedBasedColor(speedKmh)
+          source = 'CAN Vehicle Speed'
+        } else if (message['position.speed'] !== undefined) {
+          const normalizedSpeed = this.normalizeSpeedToKmh(message['position.speed'], 'position.speed')
+          speedKmh = Math.round(normalizedSpeed * 10) / 10
+          speedMph = Math.round(speedKmh * 0.621371 * 10) / 10
+          speedColor = this.getSpeedBasedColor(speedKmh)
+          source = message['position.speed'] > 200 ? 'GPS Speed (km/h)' : 'GPS Speed (m/s→km/h)'
+        }
+      }
+      
+      return {
+        kmh: speedKmh,
+        mph: speedMph,
+        color: speedColor,
+        source: source
       }
     },
     normalizeSpeedToKmh(rawSpeed, fieldName = 'unknown') {
@@ -1276,12 +1372,12 @@ export default defineComponent({
       const lastMessage = allMessages[allMessages.findIndex(el => el.timestamp === timestamps.slice(-1)[0])] || {}
 
       // Show popup with timestamp and speed information
-      this.showTrackPointPopup(e.latlng, lastMessage)
+      this.showTrackPointPopup(e.latlng, lastMessage, id)
       
       this.viewOnMapHandler(lastMessage)
       this.messagesStores[id].setSelected(timestamps)
     },
-    showTrackPointPopup(latlng, message) {
+    showTrackPointPopup(latlng, message, deviceId = null) {
       // Close any existing popup
       if (this.map.trackPointPopup) {
         this.map.closePopup(this.map.trackPointPopup)
@@ -1298,39 +1394,13 @@ export default defineComponent({
       // Extract data from message
       const timestamp = message.timestamp ? new Date(message.timestamp * 1000).toLocaleString() : 'N/A'
       
-      // Get speed in different units - check multiple possible CAN fields
-      let speedKmh = 'N/A'
-      let speedMph = 'N/A'
-      let speedColor = '#666666'
-      let speedSource = 'N/A'
+      // Get speed using the correct priority logic
+      const speedData = this.getSpeedFromMessage(message, deviceId)
       
-      // Check various possible CAN speed fields
-      if (message['can.engine.speed'] !== undefined) {
-        speedKmh = Math.round(message['can.engine.speed'] * 10) / 10
-        speedMph = Math.round(speedKmh * 0.621371 * 10) / 10
-        speedColor = this.getSpeedBasedColor(speedKmh)
-        speedSource = 'CAN Engine Speed'
-        console.log('Using can.engine.speed:', message['can.engine.speed'])
-      } else if (message['can.vehicle.speed'] !== undefined) {
-        speedKmh = Math.round(message['can.vehicle.speed'] * 10) / 10
-        speedMph = Math.round(speedKmh * 0.621371 * 10) / 10
-        speedColor = this.getSpeedBasedColor(speedKmh)
-        speedSource = 'CAN Vehicle Speed'
-        console.log('Using can.vehicle.speed:', message['can.vehicle.speed'])
-      } else if (message['can.speed'] !== undefined) {
-        speedKmh = Math.round(message['can.speed'] * 10) / 10
-        speedMph = Math.round(speedKmh * 0.621371 * 10) / 10
-        speedColor = this.getSpeedBasedColor(speedKmh)
-        speedSource = 'CAN Speed'
-        console.log('Using can.speed:', message['can.speed'])
-      } else if (message['position.speed'] !== undefined) {
-        // Fallback to GPS speed if CAN speed not available
-        const normalizedSpeed = this.normalizeSpeedToKmh(message['position.speed'], 'position.speed')
-        speedKmh = Math.round(normalizedSpeed * 10) / 10
-        speedMph = Math.round(speedKmh * 0.621371 * 10) / 10
-        speedColor = this.getSpeedBasedColor(speedKmh)
-        speedSource = message['position.speed'] > 200 ? 'GPS Speed (km/h)' : 'GPS Speed (m/s→km/h)'
-      }
+      const speedKmh = speedData.kmh
+      const speedMph = speedData.mph
+      const speedColor = speedData.color
+      const speedSource = speedData.source
       
       console.log('Final speed values:', { speedKmh, speedMph, speedSource })
 
