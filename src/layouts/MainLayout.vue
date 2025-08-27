@@ -269,6 +269,17 @@
                   <q-tooltip>Color routes by speed (CAN data)</q-tooltip>
                 </q-toggle>
               </q-item>
+              <q-item dense>
+                <q-toggle
+                  v-model="params.needShowHarshEvents"
+                  icon="mdi-alert-circle"
+                  label="Harsh events"
+                  :disable="!devices.length"
+                  @update:model-value="paramsChangeHandler"
+                >
+                  <q-tooltip>Show harsh driving events (acceleration, braking, cornering)</q-tooltip>
+                </q-toggle>
+              </q-item>
 
               <q-item class="within-iframe-hide" @click="exitHandler" clickable>
                 <q-item-section avatar class="q-pl-md">
@@ -348,6 +359,7 @@ export default defineComponent({
         needShowNamesOnMap: true,
         needShowPlayer: false,
         needShowSpeedColors: true,
+        needShowHarshEvents: true,
       },
       selectedDevice: {
         id: null,

@@ -465,7 +465,9 @@ export default defineComponent({
       }
       this.removeFlags(id)
       this.addFlags(id)
-      this.addHarshEventMarkers(id)
+      if (this.params.needShowHarshEvents) {
+        this.addHarshEventMarkers(id)
+      }
       if (!deviceMessagesStore.messages.length) {
         console.log(`⚠️ No messages found, trying telemetry for device ${id}`)
         try {
@@ -2340,6 +2342,27 @@ export default defineComponent({
             })
             
             this.tracks[id].addTo(this.map)
+          }
+        }
+      })
+    },
+    'params.needShowHarshEvents': function (newValue) {
+      // Show or hide harsh event markers when setting changes
+      this.activeDevicesIDs.forEach((id) => {
+        if (newValue) {
+          // Show harsh events
+          if (this.messages[id] && this.messages[id].length > 0) {
+            this.addHarshEventMarkers(id)
+          }
+        } else {
+          // Hide harsh events
+          if (this.markers[id] && this.markers[id].harshEvents) {
+            this.markers[id].harshEvents.forEach(marker => {
+              if (marker && this.map.hasLayer(marker)) {
+                this.map.removeLayer(marker)
+              }
+            })
+            this.markers[id].harshEvents = []
           }
         }
       })
