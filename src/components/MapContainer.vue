@@ -423,7 +423,7 @@ export default defineComponent({
     generateIcon(id, name, color) {
       return L.divIcon({
         className: `my-div-icon icon-${id}`,
-        iconSize: new L.Point(20, 35),
+        iconSize: new L.Point(40, 70),
         html: getIconHTML(name, color, this.params.needShowNamesOnMap),
       })
     },
