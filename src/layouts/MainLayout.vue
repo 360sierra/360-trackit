@@ -347,7 +347,7 @@ export default defineComponent({
         needShowInvalidPositionMessages: false,
         needShowNamesOnMap: true,
         needShowPlayer: false,
-        needShowSpeedColors: false,
+        needShowSpeedColors: true,
       },
       selectedDevice: {
         id: null,
