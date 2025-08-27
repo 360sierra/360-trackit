@@ -1600,22 +1600,28 @@ export default defineComponent({
       return events
     },
     generateHarshEventIcon(eventType) {
-      // Different colors and symbols for different event types
+      // Material UI icons for different event types
       const eventConfig = {
         acceleration: {
-          color: '#FF4444', // Red
-          symbol: '⚡', // Lightning bolt for acceleration
-          bgColor: '#FFEEEE'
+          color: '#FFC107', // Amber
+          // Material UI Bolt icon (Filled)
+          icon: `<svg viewBox="0 0 24 24" width="14" height="14" fill="white">
+            <path d="M11 21h-1l1-7H7.5c-.88 0-.33-.75-.31-.78C8.48 10.94 10.42 7.54 13.01 3h1l-1 7h3.51c.4 0 .62.19.4.66C15.39 14.25 13.51 17.98 11 21z"/>
+          </svg>`
         },
         braking: {
-          color: '#FF8800', // Orange
-          symbol: '🛑', // Stop sign for braking
-          bgColor: '#FFF4EE'
+          color: '#F44336', // Red
+          // Material UI StopCircle icon (Filled)
+          icon: `<svg viewBox="0 0 24 24" width="14" height="14" fill="white">
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4 14H8V8h8v8z"/>
+          </svg>`
         },
         cornering: {
-          color: '#8844FF', // Purple
-          symbol: '🔄', // Curved arrow for cornering
-          bgColor: '#F4EEFF'
+          color: '#9C27B0', // Purple
+          // Material UI AutoRenew icon (Filled)
+          icon: `<svg viewBox="0 0 24 24" width="14" height="14" fill="white">
+            <path d="M12 6v3l4-4-4-4v3c-4.42 0-8 3.58-8 8 0 1.57.46 3.03 1.24 4.26L6.7 14.8c-.45-.83-.7-1.79-.7-2.8 0-3.31 2.69-6 6-6zm6.76 1.74L17.3 9.2c.44.84.7 1.79.7 2.8 0 3.31-2.69 6-6 6v-3l-4 4 4 4v-3c4.42 0 8-3.58 8-8 0-1.57-.46-3.03-1.24-4.26z"/>
+          </svg>`
         }
       }
 
@@ -1625,23 +1631,23 @@ export default defineComponent({
         className: 'harsh-event-marker',
         html: `
           <div style="
-            width: 24px;
-            height: 24px;
-            background-color: ${config.bgColor};
-            border: 2px solid ${config.color};
+            width: 26px;
+            height: 26px;
+            background-color: ${config.color};
+            border: 2px solid white;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 12px;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+            box-shadow: 0 2px 6px rgba(0,0,0,0.4);
             animation: pulse 2s infinite;
           ">
-            ${config.symbol}
+            ${config.icon}
           </div>
         `,
-        iconSize: [24, 24],
-        iconAnchor: [12, 12]
+        iconSize: [26, 26],
+        iconAnchor: [13, 13],
+        popupAnchor: [0, -13]
       })
     },
     showHarshEventPopup(latlng, message, event) {
@@ -1661,11 +1667,17 @@ export default defineComponent({
       
       const eventTypeName = eventTypeNames[event.type] || 'Harsh Driving Event'
       
-      // Get event icon
+      // Get event icon (Material UI SVGs)
       const eventIcons = {
-        acceleration: '⚡',
-        braking: '🛑',
-        cornering: '🔄'
+        acceleration: `<svg viewBox="0 0 24 24" width="18" height="18" fill="#FFC107" style="vertical-align: middle;">
+          <path d="M11 21h-1l1-7H7.5c-.88 0-.33-.75-.31-.78C8.48 10.94 10.42 7.54 13.01 3h1l-1 7h3.51c.4 0 .62.19.4.66C15.39 14.25 13.51 17.98 11 21z"/>
+        </svg>`,
+        braking: `<svg viewBox="0 0 24 24" width="18" height="18" fill="#F44336" style="vertical-align: middle;">
+          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4 14H8V8h8v8z"/>
+        </svg>`,
+        cornering: `<svg viewBox="0 0 24 24" width="18" height="18" fill="#9C27B0" style="vertical-align: middle;">
+          <path d="M12 6v3l4-4-4-4v3c-4.42 0-8 3.58-8 8 0 1.57.46 3.03 1.24 4.26L6.7 14.8c-.45-.83-.7-1.79-.7-2.8 0-3.31 2.69-6 6-6zm6.76 1.74L17.3 9.2c.44.84.7 1.79.7 2.8 0 3.31-2.69 6-6 6v-3l-4 4 4 4v-3c4.42 0 8-3.58 8-8 0-1.57-.46-3.03-1.24-4.26z"/>
+        </svg>`
       }
       
       const eventIcon = eventIcons[event.type] || '🚨'
