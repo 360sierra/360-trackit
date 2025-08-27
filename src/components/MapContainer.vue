@@ -981,23 +981,20 @@ export default defineComponent({
         // Add Black Rock City geofence (20 miles radius)
         this.addBlackRockCityGeofence()
 
-        // Initialize harsh events cluster group with strict clustering
+        // Initialize harsh events cluster group with proper configuration
         this.harshEventsCluster = L.markerClusterGroup({
-          maxClusterRadius: function(zoom) {
-            // Reduce cluster radius as zoom increases to prevent single marker clustering
-            return zoom < 10 ? 80 : zoom < 12 ? 60 : 40
-          },
-          disableClusteringAtZoom: 14, // Disable clustering at zoom level 14 and above
+          maxClusterRadius: 60,
+          disableClusteringAtZoom: 16,
           spiderfyOnMaxZoom: true,
           showCoverageOnHover: false,
           zoomToBoundsOnClick: true,
-          chunkedLoading: true,
-          // Only cluster when there are actually multiple markers
+          removeOutsideVisibleBounds: true,
+          animateAddingMarkers: false,
           iconCreateFunction: function(cluster) {
             const count = cluster.getChildCount()
             
-            // Debug: log cluster creation
-            console.log(`🔍 Creating cluster with ${count} markers`)
+            // Debug: log cluster creation with marker details
+            console.log(`🔍 Creating cluster with ${count} markers at zoom ${this._map ? this._map.getZoom() : 'unknown'}`)
             
             let className = 'marker-cluster-small'
             if (count > 10) {
@@ -1520,10 +1517,10 @@ export default defineComponent({
         this.markers[id].harshEvents = []
       }
 
-      // Clear existing harsh event markers
+      // Clear existing harsh event markers from cluster
       this.markers[id].harshEvents.forEach(marker => {
-        if (marker && this.map.hasLayer(marker)) {
-          this.map.removeLayer(marker)
+        if (marker && this.harshEventsCluster.hasLayer(marker)) {
+          this.harshEventsCluster.removeLayer(marker)
         }
       })
       this.markers[id].harshEvents = []
