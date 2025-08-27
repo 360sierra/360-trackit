@@ -1672,7 +1672,7 @@ export default defineComponent({
       const duration = event.duration !== 'N/A' ? `${event.duration} seconds` : 'Unknown duration'
 
       const popupContent = `
-        <div style="min-width: 240px; font-family: Arial, sans-serif;">
+        <div style="min-width: 220px; font-family: Arial, sans-serif;">
           <div style="font-weight: bold; margin-bottom: 12px; color: #FF4444; font-size: 16px; text-align: center;">
             ${eventIcon} ${eventTypeName}
           </div>
@@ -1684,16 +1684,7 @@ export default defineComponent({
             <strong>⏱️ Event Duration:</strong><br>
             <span style="font-size: 13px; color: #666; font-weight: 500;">${duration}</span>
           </div>
-          <div style="margin-bottom: 8px;">
-            <strong>📋 Event Type:</strong><br>
-            <span style="font-size: 12px; color: #666;">
-              ${event.field} = true
-            </span>
-          </div>
-          <div style="font-size: 10px; color: #999; margin-top: 12px; text-align: center; font-style: italic;">
-            Event ID: event.enum = 253
-          </div>
-          <div style="font-size: 11px; color: #999; margin-top: 8px; text-align: center;">
+          <div style="font-size: 11px; color: #999; margin-top: 12px; text-align: center;">
             Click elsewhere to close
           </div>
         </div>
