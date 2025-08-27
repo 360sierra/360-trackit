@@ -462,7 +462,11 @@ export default defineComponent({
       /* init drop-down menu params from local storage */
       const params = this.getFromStore({ store: this.$q.localStorage, name: 'params' })
       if (params) {
-        this.params = params
+        this.params = { ...this.params, ...params }
+        // Ensure needShowHarshEvents defaults to true if not set
+        if (typeof this.params.needShowHarshEvents === 'undefined') {
+          this.params.needShowHarshEvents = true
+        }
       }
       /* init right drawer (telemetry) settings from localstorage */
       const telemetrySettings = this.getFromStore({
