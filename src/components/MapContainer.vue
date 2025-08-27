@@ -1489,21 +1489,30 @@ export default defineComponent({
       })
       this.markers[id].harshEvents = []
 
-      // Debug: Log available fields in first message to help identify harsh event fields
+      // Debug: Log available fields and search for harsh events
       if (this.messages[id].length > 0) {
         const sampleMessage = this.messages[id][0]
         const allFields = Object.keys(sampleMessage)
+        
+        // Look for event.enum = 253 messages
+        const harshEventMessages = this.messages[id].filter(msg => msg['event.enum'] === 253)
+        
         const potentialHarshFields = allFields.filter(key => 
           key.includes('harsh') || 
           key.includes('event') || 
+          key.includes('eco.driving') ||
           key.includes('acceleration') || 
           key.includes('braking') || 
-          key.includes('cornering') ||
-          key.includes('driver') ||
-          key.includes('behavior')
+          key.includes('cornering')
         )
-        console.log(`🔍 Sample message fields for device ${id}:`, allFields)
+        
+        console.log(`🔍 Sample message fields for device ${id}:`, allFields.length, 'total fields')
         console.log(`🚨 Potential harsh event fields:`, potentialHarshFields)
+        console.log(`🎯 Messages with event.enum = 253:`, harshEventMessages.length)
+        
+        if (harshEventMessages.length > 0) {
+          console.log(`📋 First harsh event message:`, harshEventMessages[0])
+        }
       }
 
       // Search for harsh driving events in messages
@@ -1534,74 +1543,57 @@ export default defineComponent({
     detectHarshEvents(message) {
       const events = []
       
-      // Check for various harsh driving event field patterns
-      // Common field names in telemetry systems
-      const harshFields = [
-        // Standard harsh event fields
-        { pattern: 'harsh.acceleration', type: 'acceleration' },
-        { pattern: 'harsh.braking', type: 'braking' },
-        { pattern: 'harsh.cornering', type: 'cornering' },
-        { pattern: 'harsh.turning', type: 'cornering' },
-        
-        // Alternative field patterns
-        { pattern: 'event.harsh.acceleration', type: 'acceleration' },
-        { pattern: 'event.harsh.braking', type: 'braking' },
-        { pattern: 'event.harsh.cornering', type: 'cornering' },
-        
-        // CAN-based harsh events
-        { pattern: 'can.harsh.acceleration', type: 'acceleration' },
-        { pattern: 'can.harsh.braking', type: 'braking' },
-        { pattern: 'can.harsh.cornering', type: 'cornering' },
-        
-        // Driver behavior events
-        { pattern: 'driver.harsh.acceleration', type: 'acceleration' },
-        { pattern: 'driver.harsh.braking', type: 'braking' },
-        { pattern: 'driver.harsh.cornering', type: 'cornering' },
-        
-        // Generic event fields
-        { pattern: 'event.acceleration', type: 'acceleration' },
-        { pattern: 'event.braking', type: 'braking' },
-        { pattern: 'event.cornering', type: 'cornering' }
-      ]
-
-      // Check each possible field pattern
-      harshFields.forEach(field => {
-        if (message[field.pattern] !== undefined) {
-          // Event detected - check if it's actually a harsh event
-          const value = message[field.pattern]
-          
-          // Different systems may store events differently:
-          // - Boolean: true/false
-          // - Numeric: threshold values (e.g., > 0 means event occurred)
-          // - String: event descriptions
-          
-          let isHarshEvent = false
-          let severity = 'medium'
-          let details = ''
-
-          if (typeof value === 'boolean' && value === true) {
-            isHarshEvent = true
-            details = `${field.type} event detected`
-          } else if (typeof value === 'number' && value > 0) {
-            isHarshEvent = true
-            severity = value > 5 ? 'high' : value > 2 ? 'medium' : 'low'
-            details = `${field.type} intensity: ${value}`
-          } else if (typeof value === 'string' && value.length > 0) {
-            isHarshEvent = true
-            details = value
-          }
-
-          if (isHarshEvent) {
-            events.push({
-              type: field.type,
-              field: field.pattern,
-              value: value,
-              severity: severity,
-              details: details
-            })
-          }
-        }
-      })
+      // Check if this is a harsh driving event message
+      // Must have event.enum = 253 to be a harsh driving event
+      if (message['event.enum'] !== 253) {
+        return events // Not a harsh driving event
+      }
+      
+      console.log('🚨 Harsh driving event detected (event.enum = 253):', message)
+      
+      // Get event duration
+      const duration = message['eco.driving.event.duration'] || 'N/A'
+      
+      // Check for specific harsh event types
+      if (message['harsh.acceleration.event'] === true) {
+        events.push({
+          type: 'acceleration',
+          field: 'harsh.acceleration.event',
+          value: true,
+          severity: 'medium',
+          duration: duration,
+          details: `Harsh acceleration event (Duration: ${duration}s)`
+        })
+        console.log('📈 Harsh acceleration detected, duration:', duration)
+      }
+      
+      if (message['harsh.braking.event'] === true) {
+        events.push({
+          type: 'braking',
+          field: 'harsh.braking.event', 
+          value: true,
+          severity: 'medium',
+          duration: duration,
+          details: `Harsh braking event (Duration: ${duration}s)`
+        })
+        console.log('🛑 Harsh braking detected, duration:', duration)
+      }
+      
+      if (message['harsh.cornering.event'] === true) {
+        events.push({
+          type: 'cornering',
+          field: 'harsh.cornering.event',
+          value: true,
+          severity: 'medium', 
+          duration: duration,
+          details: `Harsh cornering event (Duration: ${duration}s)`
+        })
+        console.log('🔄 Harsh cornering detected, duration:', duration)
+      }
+      
+      if (events.length === 0) {
+        console.log('⚠️ event.enum = 253 but no harsh event flags found')
+      }
 
       return events
     },
@@ -1667,43 +1659,41 @@ export default defineComponent({
       
       const eventTypeName = eventTypeNames[event.type] || 'Harsh Driving Event'
       
-      // Get severity color
-      const severityColors = {
-        low: '#FFA500',    // Orange
-        medium: '#FF6600', // Red-Orange
-        high: '#FF0000'    // Red
+      // Get event icon
+      const eventIcons = {
+        acceleration: '⚡',
+        braking: '🛑',
+        cornering: '🔄'
       }
       
-      const severityColor = severityColors[event.severity] || '#FF6600'
+      const eventIcon = eventIcons[event.type] || '🚨'
+      
+      // Format duration
+      const duration = event.duration !== 'N/A' ? `${event.duration} seconds` : 'Unknown duration'
 
       const popupContent = `
-        <div style="min-width: 220px; font-family: Arial, sans-serif;">
-          <div style="font-weight: bold; margin-bottom: 8px; color: ${severityColor};">
-            🚨 ${eventTypeName}
+        <div style="min-width: 240px; font-family: Arial, sans-serif;">
+          <div style="font-weight: bold; margin-bottom: 12px; color: #FF4444; font-size: 16px; text-align: center;">
+            ${eventIcon} ${eventTypeName}
           </div>
-          <div style="margin-bottom: 6px;">
-            <strong>🕐 Time:</strong><br>
-            <span style="font-size: 12px; color: #666;">${timestamp}</span>
+          <div style="margin-bottom: 8px;">
+            <strong>🕐 Date & Time:</strong><br>
+            <span style="font-size: 13px; color: #333;">${timestamp}</span>
           </div>
-          <div style="margin-bottom: 6px;">
-            <strong>⚠️ Severity:</strong><br>
-            <span style="color: ${severityColor}; font-weight: bold; text-transform: capitalize;">
-              ${event.severity}
-            </span>
+          <div style="margin-bottom: 8px;">
+            <strong>⏱️ Event Duration:</strong><br>
+            <span style="font-size: 13px; color: #666; font-weight: 500;">${duration}</span>
           </div>
-          <div style="margin-bottom: 6px;">
-            <strong>📊 Details:</strong><br>
+          <div style="margin-bottom: 8px;">
+            <strong>📋 Event Type:</strong><br>
             <span style="font-size: 12px; color: #666;">
-              ${event.details}
+              ${event.field} = true
             </span>
           </div>
-          <div style="margin-bottom: 6px;">
-            <strong>🔧 Data Source:</strong><br>
-            <span style="font-size: 10px; color: #999; font-style: italic;">
-              ${event.field}
-            </span>
+          <div style="font-size: 10px; color: #999; margin-top: 12px; text-align: center; font-style: italic;">
+            Event ID: event.enum = 253
           </div>
-          <div style="font-size: 11px; color: #999; margin-top: 8px;">
+          <div style="font-size: 11px; color: #999; margin-top: 8px; text-align: center;">
             Click elsewhere to close
           </div>
         </div>
