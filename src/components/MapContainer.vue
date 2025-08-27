@@ -983,13 +983,20 @@ export default defineComponent({
 
         // Initialize harsh events cluster group
         this.harshEventsCluster = L.markerClusterGroup({
-          maxClusterRadius: 50, // Cluster markers within 50px
-          disableClusteringAtZoom: 16, // Disable clustering at zoom level 16 and above
+          maxClusterRadius: 80, // Cluster markers within 80px
+          disableClusteringAtZoom: 15, // Disable clustering at zoom level 15 and above
           spiderfyOnMaxZoom: true,
           showCoverageOnHover: false,
           zoomToBoundsOnClick: true,
+          singleMarkerMode: false, // Don't cluster single markers
           iconCreateFunction: function(cluster) {
             const count = cluster.getChildCount()
+            
+            // Only create cluster icon if there are actually multiple markers
+            if (count <= 1) {
+              return null // Let individual markers show their own icons
+            }
+            
             let className = 'marker-cluster-small'
             if (count > 10) {
               className = 'marker-cluster-large'
