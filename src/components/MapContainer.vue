@@ -1812,10 +1812,22 @@ export default defineComponent({
       this.markers[id].setLatLng(pos).update()
     },
     updateMarkerDirection(id, dir) {
-      if (dir) {
+      if (dir !== undefined && dir !== null) {
         const element = document.querySelector(`.icon-${id} .my-div-icon__inner`)
         if (element) {
-          element.style.transform = `rotate(${dir || 0}deg)`
+          // Normalize direction to 0-360 range
+          const normalizedDir = ((dir % 360) + 360) % 360
+          
+          // Check if vehicle is pointing "backwards" (90° to 270°)
+          // In this case, flip the icon horizontally and adjust rotation
+          if (normalizedDir > 90 && normalizedDir <= 270) {
+            // Vehicle pointing left/backwards - flip horizontally and adjust rotation
+            const adjustedRotation = normalizedDir + 180
+            element.style.transform = `scaleX(-1) rotate(${adjustedRotation}deg)`
+          } else {
+            // Vehicle pointing right/forwards - normal rotation
+            element.style.transform = `rotate(${normalizedDir}deg)`
+          }
         }
       }
     },
