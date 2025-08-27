@@ -41,6 +41,9 @@ import 'leaflet/dist/leaflet.css'
 import 'leaflet.marker.slideto'
 import 'leaflet.polylinemeasure/Leaflet.PolylineMeasure.css'
 import 'leaflet.polylinemeasure/Leaflet.PolylineMeasure'
+import 'leaflet.markercluster/dist/MarkerCluster.css'
+import 'leaflet.markercluster/dist/MarkerCluster.Default.css'
+import 'leaflet.markercluster'
 import lefleatSnake from '../assets/lefleat-snake'
 import getIconHTML from '../assets/getIconHTML.js'
 
@@ -978,6 +981,31 @@ export default defineComponent({
         // Add Black Rock City geofence (20 miles radius)
         this.addBlackRockCityGeofence()
 
+        // Initialize harsh events cluster group
+        this.harshEventsCluster = L.markerClusterGroup({
+          maxClusterRadius: 50, // Cluster markers within 50px
+          disableClusteringAtZoom: 16, // Disable clustering at zoom level 16 and above
+          spiderfyOnMaxZoom: true,
+          showCoverageOnHover: false,
+          zoomToBoundsOnClick: true,
+          iconCreateFunction: function(cluster) {
+            const count = cluster.getChildCount()
+            let className = 'marker-cluster-small'
+            if (count > 10) {
+              className = 'marker-cluster-large'
+            } else if (count > 5) {
+              className = 'marker-cluster-medium'
+            }
+            
+            return L.divIcon({
+              html: `<div><span>${count}</span></div>`,
+              className: `marker-cluster ${className}`,
+              iconSize: L.point(40, 40)
+            })
+          }
+        })
+        this.map.addLayer(this.harshEventsCluster)
+
         // Map is ready for track initialization
         this.map.addEventListener('zoom', (e) => {
           if (!e.flyTo) {
@@ -1453,8 +1481,8 @@ export default defineComponent({
       // Clear harsh event markers
       if (this.markers[id] && this.markers[id].harshEvents) {
         this.markers[id].harshEvents.forEach(marker => {
-          if (marker && this.map.hasLayer(marker)) {
-            this.map.removeLayer(marker)
+          if (marker && this.harshEventsCluster.hasLayer(marker)) {
+            this.harshEventsCluster.removeLayer(marker)
           }
         })
         this.markers[id].harshEvents = []
@@ -1533,8 +1561,8 @@ export default defineComponent({
               this.showHarshEventPopup([message['position.latitude'], message['position.longitude']], message, event)
             })
 
-            // Add to map and store reference
-            marker.addTo(this.map)
+            // Add to cluster group and store reference
+            this.harshEventsCluster.addLayer(marker)
             this.markers[id].harshEvents.push(marker)
           }
         })
@@ -2389,8 +2417,8 @@ export default defineComponent({
           // Hide harsh events
           if (this.markers[id] && this.markers[id].harshEvents) {
             this.markers[id].harshEvents.forEach(marker => {
-              if (marker && this.map.hasLayer(marker)) {
-                this.map.removeLayer(marker)
+              if (marker && this.harshEventsCluster.hasLayer(marker)) {
+                this.harshEventsCluster.removeLayer(marker)
               }
             })
             this.markers[id].harshEvents = []
@@ -2406,6 +2434,7 @@ export default defineComponent({
       (this.tracks = {}), // tracks on map
       (this.geofenceCircle = null), // geofence circle
       (this.blackRockCityGeofence = null), // Black Rock City geofence reference
+      (this.harshEventsCluster = null), // cluster group for harsh events
       /* create debounced function for processing messages and telemetry */
       (this.debouncedUpdateStateByMessages = debounce(this.updateStateByMessages, 100))
     this.debouncedUpdateStateByTelemetry = debounce(this.updateStateByTelemetry, 5)
@@ -2463,7 +2492,45 @@ export default defineComponent({
 
 .harsh-event-popup .leaflet-popup-tip {
   background: white;
-  box-shadow: 0 2px 4px rgba(255, 0, 0, 0.1);
+}
+
+/* Harsh events cluster styling */
+.marker-cluster-small {
+  background-color: rgba(255, 193, 7, 0.8);
+  border: 2px solid #FFC107;
+}
+
+.marker-cluster-medium {
+  background-color: rgba(255, 152, 0, 0.8);
+  border: 2px solid #FF9800;
+}
+
+.marker-cluster-large {
+  background-color: rgba(244, 67, 54, 0.8);
+  border: 2px solid #F44336;
+}
+
+.marker-cluster {
+  border-radius: 50%;
+  text-align: center;
+  font-weight: bold;
+  font-size: 12px;
+}
+
+.marker-cluster div {
+  width: 36px;
+  height: 36px;
+  margin-left: 2px;
+  margin-top: 2px;
+  text-align: center;
+  border-radius: 50%;
+  background-color: rgba(255, 255, 255, 0.9);
+}
+
+.marker-cluster span {
+  line-height: 36px;
+  color: #333;
+  font-weight: bold;
 }
 
 /* Harsh event marker styling */
