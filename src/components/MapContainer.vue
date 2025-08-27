@@ -423,7 +423,7 @@ export default defineComponent({
     generateIcon(id, name, color) {
       return L.divIcon({
         className: `my-div-icon icon-${id}`,
-        iconSize: new L.Point(40, 70),
+        iconSize: new L.Point(30, 52),
         html: getIconHTML(name, color, this.params.needShowNamesOnMap),
       })
     },
@@ -1818,16 +1818,23 @@ export default defineComponent({
           // Normalize direction to 0-360 range
           const normalizedDir = ((dir % 360) + 360) % 360
           
-          // Check if vehicle is pointing "backwards" (90° to 270°)
-          // In this case, flip the icon horizontally and adjust rotation
-          if (normalizedDir > 90 && normalizedDir <= 270) {
-            // Vehicle pointing left/backwards - flip horizontally and adjust rotation
-            const adjustedRotation = normalizedDir + 180
-            element.style.transform = `scaleX(-1) rotate(${adjustedRotation}deg)`
+          // The vehicle icon SVG is designed pointing EAST (right/90°) by default
+          // position.direction: 0° = North, 90° = East, 180° = South, 270° = West
+          // We need to adjust rotation: subtract 90° because icon default is East (90°)
+          const iconRotation = normalizedDir - 90
+          
+          // Check if the resulting rotation would make the icon appear upside down
+          // This happens when the adjusted rotation is between 90° and 270°
+          if (iconRotation > 90 && iconRotation < 270) {
+            // Icon would be upside down - flip horizontally and adjust rotation
+            const flippedRotation = iconRotation - 180
+            element.style.transform = `scaleX(-1) rotate(${flippedRotation}deg)`
           } else {
-            // Vehicle pointing right/forwards - normal rotation
-            element.style.transform = `rotate(${normalizedDir}deg)`
+            // Normal rotation
+            element.style.transform = `rotate(${iconRotation}deg)`
           }
+          
+          console.log(`🚐 Vehicle ${id} direction: ${dir}° -> iconRotation: ${iconRotation}° -> transform: ${element.style.transform}`)
         }
       }
     },
