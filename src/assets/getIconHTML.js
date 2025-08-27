@@ -3,12 +3,18 @@ export default function getIconHTML(name, color, needNames) {
     <svg
       xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 24 24"
       preserveAspectRatio="xMidYMid meet">
-      <path fill="#000000" stroke="#000" stroke-width="0.5" d="M17 5H3c-1.1 0-2 .9-2 2v11h2c0 1.1.9 2 2 2s2-.9 2-2h8c0 1.1.9 2 2 2s2-.9 2-2h2V9l-5-4zM9 18.5c-.8 0-1.5-.7-1.5-1.5s.7-1.5 1.5-1.5 1.5.7 1.5 1.5-.7 1.5-1.5 1.5zm8 0c-.8 0-1.5-.7-1.5-1.5s.7-1.5 1.5-1.5 1.5.7 1.5 1.5-.7 1.5-1.5 1.5zM16 12H4V7h12v5z"/>
-      <!-- Windows/doors for shuttle -->
-      <rect fill="#fff" x="5" y="8" width="2" height="2"/>
-      <rect fill="#fff" x="8" y="8" width="2" height="2"/>
-      <rect fill="#fff" x="11" y="8" width="2" height="2"/>
-      <rect fill="#fff" x="14" y="8" width="2" height="2"/>
+      <!-- Vehicle body with proper scaling -->
+      <path fill="#000000" stroke="#000" stroke-width="0.5" d="M16 6H4c-1 0-1.5.5-1.5 1.5v8h1.5c0 1 .5 1.5 1.5 1.5s1.5-.5 1.5-1.5h6c0 1 .5 1.5 1.5 1.5s1.5-.5 1.5-1.5h1.5v-6l-4-3.5z"/>
+      <!-- Wheels properly positioned -->
+      <circle fill="#333" cx="7" cy="16" r="1.2"/>
+      <circle fill="#666" cx="7" cy="16" r="0.8"/>
+      <circle fill="#333" cx="15" cy="16" r="1.2"/>
+      <circle fill="#666" cx="15" cy="16" r="0.8"/>
+      <!-- Windows/doors for shuttle - properly scaled -->
+      <rect fill="#ffffff" stroke="#cccccc" stroke-width="0.1" x="5" y="8.5" width="2" height="1.5" rx="0.2"/>
+      <rect fill="#ffffff" stroke="#cccccc" stroke-width="0.1" x="7.5" y="8.5" width="2" height="1.5" rx="0.2"/>
+      <rect fill="#ffffff" stroke="#cccccc" stroke-width="0.1" x="10" y="8.5" width="2" height="1.5" rx="0.2"/>
+      <rect fill="#ffffff" stroke="#cccccc" stroke-width="0.1" x="12.5" y="8.5" width="2" height="1.5" rx="0.2"/>
     </svg>
   `
   const html = `
