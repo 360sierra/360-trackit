@@ -989,7 +989,7 @@ export default defineComponent({
           showCoverageOnHover: false,
           zoomToBoundsOnClick: true,
           removeOutsideVisibleBounds: true,
-          animateAddingMarkers: false,
+          animateAddingMarkers: true,
           iconCreateFunction: function(cluster) {
             const count = cluster.getChildCount()
             
@@ -2521,6 +2521,7 @@ export default defineComponent({
   text-align: center;
   font-weight: bold;
   font-size: 12px;
+  animation: pulse 2s infinite;
 }
 
 .marker-cluster div {
@@ -2537,6 +2538,24 @@ export default defineComponent({
   line-height: 36px;
   color: #333;
   font-weight: bold;
+}
+
+/* Cluster hover effects for better interactivity */
+.marker-cluster:hover {
+  transform: scale(1.1);
+  transition: transform 0.2s ease-in-out;
+}
+
+.marker-cluster:hover .marker-cluster-small {
+  background-color: rgba(255, 193, 7, 1);
+}
+
+.marker-cluster:hover .marker-cluster-medium {
+  background-color: rgba(255, 152, 0, 1);
+}
+
+.marker-cluster:hover .marker-cluster-large {
+  background-color: rgba(244, 67, 54, 1);
 }
 
 /* Harsh event marker styling */
