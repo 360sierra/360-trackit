@@ -176,12 +176,60 @@ export default defineComponent({
         this.markers[id].flags.start = L.marker(startPosition, {
           icon: this.generateFlag({ id, status: 'start' }),
         })
+        // Add tooltip with start time information and get address
+        const startTime = new Date(this.messages[id][0].timestamp * 1000).toLocaleString()
+        this.markers[id].flags.start.bindTooltip(`<strong>START</strong><br>${startTime}<br><em>Loading address...</em>`, {
+          permanent: false,
+          direction: 'top',
+          offset: [0, -10]
+        })
         this.markers[id].flags.start.addTo(this.map)
+        
+        // Get reverse geocoding for start position
+        this.getReverseGeocoding(startPosition[0], startPosition[1]).then(result => {
+          let newContent = `<strong>START</strong><br>${startTime}<br><em>${result.address}</em>`
+          if (result.state) {
+            newContent += `<br><small>${result.state}</small>`
+          }
+          this.markers[id].flags.start.setTooltipContent(newContent)
+          // Force tooltip update if it's currently open
+          if (this.markers[id].flags.start.isTooltipOpen()) {
+            this.markers[id].flags.start.closeTooltip()
+            this.markers[id].flags.start.openTooltip()
+          }
+        }).catch(() => {
+          this.markers[id].flags.start.setTooltipContent(`<strong>START</strong><br>${startTime}`)
+        })
+        
         this.markers[id].flags.stop = L.marker(stopPosition, {
           icon: this.generateFlag({ id, status: 'stop' }),
         })
-        const needStopFlag = this.messages[id].timestampTo <= Date.now()
-        needStopFlag && this.markers[id].flags.stop.addTo(this.map)
+        // Add tooltip with end time information and get address
+        const endTime = new Date(this.messages[id][this.messages[id].length - 1].timestamp * 1000).toLocaleString()
+        this.markers[id].flags.stop.bindTooltip(`<strong>END</strong><br>${endTime}<br><em>Loading address...</em>`, {
+          permanent: false,
+          direction: 'top',
+          offset: [0, -10]
+        })
+        
+        // Get reverse geocoding for end position
+        this.getReverseGeocoding(stopPosition[0], stopPosition[1]).then(result => {
+          let newContent = `<strong>END</strong><br>${endTime}<br><em>${result.address}</em>`
+          if (result.state) {
+            newContent += `<br><small>${result.state}</small>`
+          }
+          this.markers[id].flags.stop.setTooltipContent(newContent)
+          // Force tooltip update if it's currently open
+          if (this.markers[id].flags.stop.isTooltipOpen()) {
+            this.markers[id].flags.stop.closeTooltip()
+            this.markers[id].flags.stop.openTooltip()
+          }
+        }).catch(() => {
+          this.markers[id].flags.stop.setTooltipContent(`<strong>END</strong><br>${endTime}`)
+        })
+        
+        // Always show the stop flag for better visibility of the route endpoints
+        this.markers[id].flags.stop.addTo(this.map)
       }
     },
     centerOnDevice(id, zoom) {
@@ -289,18 +337,87 @@ export default defineComponent({
     generateFlag(props) {
       let { id, status } = props || {}
       let color = id && this.devicesColors[id] ? this.devicesColors[id] : '#e53935',
-        icon = 'mdi-map-marker-star-outline'
+        icon = 'mdi-map-marker-star-outline',
+        backgroundColor = 'rgba(255, 255, 255, 0.9)',
+        borderColor = '#333',
+        label = ''
+      
       if (status === 'start') {
-        color = getCssVar('primary')
-        icon = 'mdi-map-marker-outline'
+        color = '#FFFFFF' // White text
+        icon = 'S'
+        label = 'START'
+        backgroundColor = '#4CAF50' // Green background
+        borderColor = '#2E7D32'
       } else if (status === 'stop') {
-        color = getCssVar('positive')
-        icon = 'mdi-map-marker-check'
+        color = '#FFFFFF' // White text
+        icon = 'L'
+        label = 'LAST'
+        backgroundColor = '#F44336' // Red background
+        borderColor = '#D32F2F'
       }
+      
       return L.divIcon({
         className: `my-flag-icon flag-${status}-${id}`,
-        iconSize: new L.Point(35, 35),
-        html: `<i aria-hidden="true" style="color: ${color};" class="my-flag-icon__inner mdi ${icon}"></i>`,
+        iconSize: new L.Point(60, 60),
+        iconAnchor: new L.Point(30, 55),
+        html: `
+          <div style="
+            position: relative;
+            width: 60px;
+            height: 60px;
+            text-align: center;
+          ">
+            <!-- Label above the marker -->
+            <div style="
+              position: absolute;
+              top: 0;
+              left: 50%;
+              transform: translateX(-50%);
+              background: rgba(255, 255, 255, 0.95);
+              border: 1px solid #ccc;
+              border-radius: 4px;
+              padding: 2px 6px;
+              font-size: 10px;
+              font-weight: bold;
+              color: #333;
+              white-space: nowrap;
+              box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+            ">${label}</div>
+            
+            <!-- Material UI LocationOn icon as pin -->
+            <svg style="
+              position: absolute;
+              top: 18px;
+              left: 50%;
+              transform: translateX(-50%);
+              width: 40px;
+              height: 40px;
+              fill: ${backgroundColor};
+              stroke: ${borderColor};
+              stroke-width: 1;
+              filter: drop-shadow(0 3px 8px rgba(0,0,0,0.3));
+            " viewBox="0 0 24 24">
+              <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+            </svg>
+            
+            <!-- Letter inside the pin -->
+            <div style="
+              position: absolute;
+              top: 26px;
+              left: 50%;
+              transform: translateX(-50%);
+              width: 16px;
+              height: 16px;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              font-size: 12px;
+              font-weight: bold;
+              color: ${color};
+              z-index: 10;
+            ">${icon}</div>
+          </div>
+        `,
       })
     },
     generateIcon(id, name, color) {
@@ -442,16 +559,18 @@ export default defineComponent({
 
       const segments = []
       let currentSegment = [messages[0]]
-      let currentStyle = this.getSegmentStyle(id, false) // First segment is always normal
+      const firstSpeed = messages[0]['position.speed'] || null
+      let currentStyle = this.getSegmentStyle(id, false, firstSpeed) // First segment with speed
 
       for (let i = 1; i < messages.length; i++) {
         const currentMessage = messages[i]
         const prevMessage = messages[i - 1]
         const shouldBeDashed = this.shouldUseDashedLine(currentMessage, prevMessage)
-        const newStyle = this.getSegmentStyle(id, shouldBeDashed)
+        const currentSpeed = currentMessage['position.speed'] || null
+        const newStyle = this.getSegmentStyle(id, shouldBeDashed, currentSpeed)
+        
         // If style changes, finish current segment and start new one
         if (JSON.stringify(currentStyle) !== JSON.stringify(newStyle)) {
-          // currentSegment.push(currentMessage)
           segments.push({
             messages: currentSegment,
             style: currentStyle
@@ -491,8 +610,14 @@ export default defineComponent({
 
       return polylines.length > 0 ? polylines : null
     },
-    getSegmentStyle(id, isDashed) {
+    getSegmentStyle(id, isDashed, speed = null) {
       const baseColor = this.getColorById(id)
+      let segmentColor = baseColor
+
+      // Apply speed-based coloring if enabled and speed data is available
+      if (this.params.needShowSpeedColors && speed !== null && typeof speed === 'number' && speed >= 0) {
+        segmentColor = this.getSpeedBasedColor(speed)
+      }
 
       if (isDashed) {
         return {
@@ -504,9 +629,116 @@ export default defineComponent({
       } else {
         return {
           weight: 4,
-          color: baseColor,
+          color: segmentColor,
           opacity: 1
         }
+      }
+    },
+    getSpeedBasedColor(speed) {
+      // Speed-based color mapping (mph) - Enhanced visual differentiation for high speeds
+      // Focus on highway speeds where monitoring is most critical
+      // Note: Input speed is assumed to be in km/h, so we convert to mph first
+      const speedMph = speed * 0.621371
+      
+      if (speedMph <= 5) {
+        return '#0066FF' // Blue - stopped/parking
+      } else if (speedMph <= 25) {
+        return '#00CC66' // Bright Green - city/residential
+      } else if (speedMph <= 45) {
+        return '#FFCC00' // Bright Yellow - arterial roads
+      } else if (speedMph <= 65) {
+        return '#FF6600' // Bright Orange - highway speeds
+      } else if (speedMph <= 85) {
+        return '#CC0066' // Magenta - high highway speeds
+      } else {
+        return '#990000' // Dark Red - excessive speeds
+      }
+    },
+    async getReverseGeocoding(lat, lon) {
+      try {
+        // Use Nominatim (OpenStreetMap) free reverse geocoding service
+        const response = await fetch(
+          `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=18&addressdetails=1`,
+          {
+            headers: {
+              'User-Agent': 'TrackIt-App/1.0 (Vehicle Tracking Application)'
+            }
+          }
+        )
+        
+        if (!response.ok) {
+          throw new Error('Geocoding request failed')
+        }
+        
+        const data = await response.json()
+        
+        if (data && data.display_name) {
+          // Try to get a concise address
+          const address = data.address
+          let shortAddress = ''
+          let stateInfo = ''
+          
+          if (address) {
+            // Build a concise address from available components
+            const components = []
+            
+            // Add house number and road
+            if (address.house_number && address.road) {
+              components.push(`${address.house_number} ${address.road}`)
+            } else if (address.road) {
+              components.push(address.road)
+            }
+            
+            // Add city/town/village/hamlet/suburb
+            if (address.city) {
+              components.push(address.city)
+            } else if (address.town) {
+              components.push(address.town)
+            } else if (address.village) {
+              components.push(address.village)
+            } else if (address.hamlet) {
+              components.push(address.hamlet)
+            } else if (address.suburb) {
+              components.push(address.suburb)
+            }
+            
+            // Extract state information separately
+            if (address.state) {
+              stateInfo = address.state
+            }
+            
+            // If we still don't have enough components, try county
+            if (components.length < 2 && address.county) {
+              components.push(address.county)
+            }
+            
+            // If still not enough, try country as last resort
+            if (components.length < 2 && address.country) {
+              components.push(address.country)
+            }
+            
+            shortAddress = components.slice(0, 2).join(', ')
+          }
+          
+          // Fallback to display_name if we couldn't build a short address
+          if (!shortAddress) {
+            // Truncate display_name if too long
+            shortAddress = data.display_name.length > 50 
+              ? data.display_name.substring(0, 47) + '...'
+              : data.display_name
+          }
+          
+          // Return object with address and state
+          return {
+            address: shortAddress,
+            state: stateInfo
+          }
+        }
+        
+        throw new Error('No address found')
+      } catch (error) {
+        console.warn('Reverse geocoding failed:', error)
+        throw error
       }
     },
     async initDevice(id) {
@@ -1023,8 +1255,149 @@ export default defineComponent({
       const allMessages = this.messages[id]
       const lastMessage = allMessages[allMessages.findIndex(el => el.timestamp === timestamps.slice(-1)[0])] || {}
 
+      // Show popup with timestamp and speed information
+      this.showTrackPointPopup(e.latlng, lastMessage)
+      
       this.viewOnMapHandler(lastMessage)
       this.messagesStores[id].setSelected(timestamps)
+    },
+    showTrackPointPopup(latlng, message) {
+      // Close any existing popup
+      if (this.map.trackPointPopup) {
+        this.map.closePopup(this.map.trackPointPopup)
+      }
+
+      // Debug: Log all available fields in the message
+      console.log('Message fields available:', Object.keys(message))
+      console.log('Full message data:', message)
+      
+      // Look for CAN speed fields
+      const canSpeedFields = Object.keys(message).filter(key => key.includes('speed') || key.includes('can'))
+      console.log('CAN/Speed related fields:', canSpeedFields)
+      
+      // Extract data from message
+      const timestamp = message.timestamp ? new Date(message.timestamp * 1000).toLocaleString() : 'N/A'
+      
+      // Get speed in different units - check multiple possible CAN fields
+      let speedKmh = 'N/A'
+      let speedMph = 'N/A'
+      let speedColor = '#666666'
+      let speedSource = 'N/A'
+      
+      // Check various possible CAN speed fields
+      if (message['can.engine.speed'] !== undefined) {
+        speedKmh = Math.round(message['can.engine.speed'] * 10) / 10
+        speedMph = Math.round(speedKmh * 0.621371 * 10) / 10
+        speedColor = this.getSpeedBasedColor(speedKmh)
+        speedSource = 'CAN Engine Speed'
+        console.log('Using can.engine.speed:', message['can.engine.speed'])
+      } else if (message['can.vehicle.speed'] !== undefined) {
+        speedKmh = Math.round(message['can.vehicle.speed'] * 10) / 10
+        speedMph = Math.round(speedKmh * 0.621371 * 10) / 10
+        speedColor = this.getSpeedBasedColor(speedKmh)
+        speedSource = 'CAN Vehicle Speed'
+        console.log('Using can.vehicle.speed:', message['can.vehicle.speed'])
+      } else if (message['can.speed'] !== undefined) {
+        speedKmh = Math.round(message['can.speed'] * 10) / 10
+        speedMph = Math.round(speedKmh * 0.621371 * 10) / 10
+        speedColor = this.getSpeedBasedColor(speedKmh)
+        speedSource = 'CAN Speed'
+        console.log('Using can.speed:', message['can.speed'])
+      } else if (message['position.speed'] !== undefined) {
+        // Fallback to GPS speed if CAN speed not available
+        speedKmh = Math.round(message['position.speed'] * 3.6 * 10) / 10 // Convert m/s to km/h
+        speedMph = Math.round(speedKmh * 0.621371 * 10) / 10
+        speedColor = this.getSpeedBasedColor(speedKmh)
+        speedSource = 'GPS Speed'
+        console.log('Using position.speed (GPS):', message['position.speed'], 'm/s')
+      }
+      
+      console.log('Final speed values:', { speedKmh, speedMph, speedSource })
+
+      // Create popup content
+      const popupContent = `
+        <div style="min-width: 200px; font-family: Arial, sans-serif;">
+          <div style="font-weight: bold; margin-bottom: 8px; color: #333;">
+            📍 Track Point Info
+          </div>
+          <div style="margin-bottom: 6px;">
+            <strong>🕐 Time:</strong><br>
+            <span style="font-size: 12px; color: #666;">${timestamp}</span>
+          </div>
+          <div style="margin-bottom: 6px;">
+            <strong>🚗 Speed:</strong><br>
+            <span style="color: ${speedColor}; font-weight: bold; font-size: 14px;">
+              ${speedMph} mph
+            </span>
+            <span style="color: #888; font-size: 12px;">
+              (${speedKmh} km/h)
+            </span>
+            <br>
+            <span style="font-size: 10px; color: #999; font-style: italic;">
+              Source: ${speedSource}
+            </span>
+          </div>
+          <div style="font-size: 11px; color: #999; margin-top: 8px;">
+            Click elsewhere to close
+          </div>
+        </div>
+      `
+
+      // Create and show popup
+      this.map.trackPointPopup = L.popup({
+        closeButton: true,
+        autoClose: true,
+        closeOnClick: true,
+        className: 'track-point-popup'
+      })
+        .setLatLng(latlng)
+        .setContent(popupContent)
+        .openOn(this.map)
+    },
+    autoFitAllTracks() {
+      // Auto-center and zoom to fit all visible tracks
+      const allCoordinates = []
+      
+      this.activeDevicesIDs.forEach((id) => {
+        if (this.messages[id] && this.messages[id].length > 0) {
+          // Collect all coordinates from all devices
+          this.messages[id].forEach((message) => {
+            if (message['position.latitude'] && message['position.longitude']) {
+              allCoordinates.push([
+                message['position.latitude'],
+                message['position.longitude']
+              ])
+            }
+          })
+        }
+      })
+      
+      if (allCoordinates.length > 0) {
+        try {
+          if (allCoordinates.length === 1) {
+            // Single point - center on it with reasonable zoom
+            this.map.setView(allCoordinates[0], 14, { animation: true })
+          } else {
+            // Multiple points - fit bounds with padding
+            const bounds = L.latLngBounds(allCoordinates)
+            this.map.fitBounds(bounds, {
+              padding: [20, 20], // Add padding around the bounds
+              maxZoom: 16, // Don't zoom in too much
+              animate: true,
+              duration: 1.0 // Smooth animation
+            })
+          }
+          console.log(`📍 Auto-fitted map to ${allCoordinates.length} coordinates from ${this.activeDevicesIDs.length} device(s)`)
+        } catch (error) {
+          console.warn('Error auto-fitting tracks:', error)
+          // Fallback: center on first coordinate if bounds fail
+          if (allCoordinates.length > 0) {
+            this.map.setView(allCoordinates[0], 12, { animation: true })
+          }
+        }
+      } else {
+        console.log('📍 No coordinates available for auto-fit')
+      }
     },
     updateDeviceColorOnMap(id, color) {
       if (
@@ -1466,24 +1839,36 @@ export default defineComponent({
         L.DomUtil.removeClass(this.map._container, 'crosshair-cursor-enabled')
       }
     },
-    date() {
+    async date() {
       this.player.status = 'stop'
       this.player.currentMsgTimestamp = null
-      this.activeDevicesIDs.forEach(async (id) => {
+      
+      // Load data for all devices
+      const dataLoadPromises = this.activeDevicesIDs.map(async (id) => {
         if (this.devicesStates[id].initStatus === true) {
           await this.getDeviceData(id)
         } else {
           // Wait for device to be initialized
-          const checkInit = () => {
-            if (this.devicesStates[id]?.initStatus === true) {
-              this.getDeviceData(id)
-            } else {
-              setTimeout(checkInit, 100)
+          return new Promise((resolve) => {
+            const checkInit = () => {
+              if (this.devicesStates[id]?.initStatus === true) {
+                this.getDeviceData(id).then(resolve)
+              } else {
+                setTimeout(checkInit, 100)
+              }
             }
-          }
-          setTimeout(checkInit, 100)
+            setTimeout(checkInit, 100)
+          })
         }
       })
+      
+      // Wait for all data to load, then auto-center
+      await Promise.all(dataLoadPromises)
+      
+      // Auto-center and zoom to fit all tracks after data is loaded
+      setTimeout(() => {
+        this.autoFitAllTracks()
+      }, 500) // Small delay to ensure tracks are rendered
     },
     colorModel(color) {
       /* color modal dialog returned new selected color for the device - save it to the store */
@@ -1579,6 +1964,34 @@ export default defineComponent({
         this.debouncedUpdateStateByTelemetry(deviceId)
       },
     },
+    'params.needShowSpeedColors': function () {
+      // Redraw all tracks when speed colors setting changes
+      this.activeDevicesIDs.forEach(async (id) => {
+        if (this.devicesStates[id].initStatus === true && this.tracks[id]) {
+          // Remove existing track
+          if (this.tracks[id].remove) {
+            this.tracks[id].remove()
+          } else {
+            this.map.removeLayer(this.tracks[id])
+          }
+          
+          // Recreate track with new styling
+          const segmentedTrack = this.createSegmentedTrack(id)
+          if (segmentedTrack && segmentedTrack.length > 0) {
+            this.tracks[id] = L.layerGroup()
+            
+            segmentedTrack.forEach(polyline => {
+              polyline.addEventListener('click', (e) =>
+                this.showMessageByTrackClick(e, id, polyline),
+              )
+              this.tracks[id].addLayer(polyline)
+            })
+            
+            this.tracks[id].addTo(this.map)
+          }
+        }
+      })
+    },
   },
   created() {
     /* init map staff here, so that it wasn't reactive */
@@ -1612,6 +2025,24 @@ export default defineComponent({
   },
 })
 </script>
+
+<style>
+/* Track point popup styling */
+.track-point-popup .leaflet-popup-content-wrapper {
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.track-point-popup .leaflet-popup-content {
+  margin: 12px 16px;
+  line-height: 1.4;
+}
+
+.track-point-popup .leaflet-popup-tip {
+  background: white;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+</style>
 
 <style lang="sass">
 .leaflet-control-layers

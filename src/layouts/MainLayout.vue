@@ -145,6 +145,35 @@
             @click:customButton="initDateFromTelemetry"
           />
         </div>
+              <div v-if="devices.length && params.needShowSpeedColors" class="floated speed-legend">
+        <div class="speed-legend-container">
+          <div class="speed-legend-title">Speed (mph)</div>
+          <div class="speed-legend-item">
+            <div class="speed-color" style="background-color: #0066FF;"></div>
+            <span>0-5</span>
+          </div>
+          <div class="speed-legend-item">
+            <div class="speed-color" style="background-color: #00CC66;"></div>
+            <span>5-25</span>
+          </div>
+          <div class="speed-legend-item">
+            <div class="speed-color" style="background-color: #FFCC00;"></div>
+            <span>25-45</span>
+          </div>
+          <div class="speed-legend-item">
+            <div class="speed-color" style="background-color: #FF6600;"></div>
+            <span>45-65</span>
+          </div>
+          <div class="speed-legend-item">
+            <div class="speed-color" style="background-color: #CC0066;"></div>
+            <span>65-85</span>
+          </div>
+          <div class="speed-legend-item">
+            <div class="speed-color" style="background-color: #990000;"></div>
+            <span>85+</span>
+          </div>
+        </div>
+      </div>
         <div v-if="!activeDevicesIDs.length && devices.length" class="floated no-devices">
           <span class="no-devices__message">You have no selected devices</span>
           <div style="margin-top: 15px">
@@ -229,6 +258,17 @@
                   <q-tooltip>Display cars' names on the map</q-tooltip>
                 </q-toggle>
               </q-item>
+              <q-item dense>
+                <q-toggle
+                  v-model="params.needShowSpeedColors"
+                  icon="mdi-speedometer"
+                  label="Speed colors"
+                  :disable="!devices.length"
+                  @update:model-value="paramsChangeHandler"
+                >
+                  <q-tooltip>Color routes by speed (CAN data)</q-tooltip>
+                </q-toggle>
+              </q-item>
 
               <q-item class="within-iframe-hide" @click="exitHandler" clickable>
                 <q-item-section avatar class="q-pl-md">
@@ -307,6 +347,7 @@ export default defineComponent({
         needShowInvalidPositionMessages: false,
         needShowNamesOnMap: true,
         needShowPlayer: false,
+        needShowSpeedColors: false,
       },
       selectedDevice: {
         id: null,
@@ -845,4 +886,44 @@ export default defineComponent({
       text-transform: uppercase
   &.white-background
     background: rgba(255,255,255,0.3)
+
+.speed-legend
+  position: fixed
+  top: 250px
+  right: 20px
+  z-index: 1000
+  pointer-events: auto
+
+.speed-legend-container
+  background: rgba(255, 255, 255, 0.9)
+  border-radius: 8px
+  padding: 12px
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2)
+  font-size: 12px
+  min-width: 100px
+
+.speed-legend-title
+  font-weight: bold
+  margin-bottom: 8px
+  text-align: center
+  color: #333
+
+.speed-legend-item
+  display: flex
+  align-items: center
+  margin-bottom: 4px
+  
+  &:last-child
+    margin-bottom: 0
+
+.speed-color
+  width: 16px
+  height: 16px
+  border-radius: 2px
+  margin-right: 8px
+  border: 1px solid rgba(0, 0, 0, 0.2)
+
+.speed-legend-item span
+  color: #333
+  font-weight: 500
 </style>
