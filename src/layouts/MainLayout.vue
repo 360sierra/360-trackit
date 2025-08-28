@@ -149,27 +149,15 @@
         <div class="speed-legend-container">
           <div class="speed-legend-title">Speed (mph)</div>
           <div class="speed-legend-item">
-            <div class="speed-color" style="background-color: #0066FF;"></div>
-            <span>0-5</span>
-          </div>
-          <div class="speed-legend-item">
             <div class="speed-color" style="background-color: #00CC66;"></div>
-            <span>5-25</span>
+            <span>0-45</span>
           </div>
           <div class="speed-legend-item">
             <div class="speed-color" style="background-color: #FFCC00;"></div>
-            <span>25-45</span>
+            <span>45-85</span>
           </div>
           <div class="speed-legend-item">
-            <div class="speed-color" style="background-color: #FF6600;"></div>
-            <span>45-65</span>
-          </div>
-          <div class="speed-legend-item">
-            <div class="speed-color" style="background-color: #CC0066;"></div>
-            <span>65-85</span>
-          </div>
-          <div class="speed-legend-item">
-            <div class="speed-color" style="background-color: #990000;"></div>
+            <div class="speed-color" style="background-color: #FF0000;"></div>
             <span>85+</span>
           </div>
         </div>
@@ -202,6 +190,8 @@
           </div>
         </div>
 
+        <!-- Device telemetry button hidden for now -->
+        <!--
         <q-btn
           small
           round
@@ -214,6 +204,7 @@
         >
           <q-tooltip>Device telemetry</q-tooltip>
         </q-btn>
+        -->
         <q-btn
           small
           round
@@ -359,7 +350,7 @@ export default defineComponent({
         needShowNamesOnMap: true,
         needShowPlayer: false,
         needShowSpeedColors: true,
-        needShowHarshEvents: true,
+        needShowHarshEvents: false,
       },
       selectedDevice: {
         id: null,
@@ -463,9 +454,9 @@ export default defineComponent({
       const params = this.getFromStore({ store: this.$q.localStorage, name: 'params' })
       if (params) {
         this.params = { ...this.params, ...params }
-        // Ensure needShowHarshEvents defaults to true if not set
+        // Ensure needShowHarshEvents defaults to false if not set
         if (typeof this.params.needShowHarshEvents === 'undefined') {
-          this.params.needShowHarshEvents = true
+          this.params.needShowHarshEvents = false
         }
       }
       /* init right drawer (telemetry) settings from localstorage */

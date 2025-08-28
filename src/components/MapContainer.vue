@@ -176,63 +176,55 @@ export default defineComponent({
             this.messages[id][this.messages[id].length - 1]['position.latitude'],
             this.messages[id][this.messages[id].length - 1]['position.longitude'],
           ]
-        this.markers[id].flags.start = L.marker(startPosition, {
-          icon: this.generateFlag({ id, status: 'start' }),
-        })
-        // Add tooltip with start time information and get address
+        
+        // OBTENER GEOLOCALIZACION TAN PRONTO COMO SEA POSIBLE
         const startTime = new Date(this.messages[id][0].timestamp * 1000).toLocaleString()
-        this.markers[id].flags.start.bindTooltip(`<strong>START</strong><br>${startTime}<br><em>Loading address...</em>`, {
-          permanent: false,
-          direction: 'top',
-          offset: [0, -10]
-        })
-        this.markers[id].flags.start.addTo(this.map)
-        
-        // Get reverse geocoding for start position
-        this.getReverseGeocoding(startPosition[0], startPosition[1]).then(result => {
-          let newContent = `<strong>START</strong><br>${startTime}<br><em>${result.address}</em>`
-          if (result.state) {
-            newContent += `<br><small>${result.state}</small>`
-          }
-          this.markers[id].flags.start.setTooltipContent(newContent)
-          // Force tooltip update if it's currently open
-          if (this.markers[id].flags.start.isTooltipOpen()) {
-            this.markers[id].flags.start.closeTooltip()
-            this.markers[id].flags.start.openTooltip()
-          }
-        }).catch(() => {
-          this.markers[id].flags.start.setTooltipContent(`<strong>START</strong><br>${startTime}`)
-        })
-        
-        this.markers[id].flags.stop = L.marker(stopPosition, {
-          icon: this.generateFlag({ id, status: 'stop' }),
-        })
-        // Add tooltip with end time information and get address
         const endTime = new Date(this.messages[id][this.messages[id].length - 1].timestamp * 1000).toLocaleString()
-        this.markers[id].flags.stop.bindTooltip(`<strong>END</strong><br>${endTime}<br><em>Loading address...</em>`, {
-          permanent: false,
-          direction: 'top',
-          offset: [0, -10]
-        })
         
-        // Get reverse geocoding for end position
-        this.getReverseGeocoding(stopPosition[0], stopPosition[1]).then(result => {
-          let newContent = `<strong>END</strong><br>${endTime}<br><em>${result.address}</em>`
-          if (result.state) {
-            newContent += `<br><small>${result.state}</small>`
-          }
-          this.markers[id].flags.stop.setTooltipContent(newContent)
-          // Force tooltip update if it's currently open
-          if (this.markers[id].flags.stop.isTooltipOpen()) {
-            this.markers[id].flags.stop.closeTooltip()
-            this.markers[id].flags.stop.openTooltip()
-          }
-        }).catch(() => {
-          this.markers[id].flags.stop.setTooltipContent(`<strong>END</strong><br>${endTime}`)
-        })
+        let startAddress = '', endAddress = ''
         
-        // Always show the stop flag for better visibility of the route endpoints
-        this.markers[id].flags.stop.addTo(this.map)
+        // Obtener ambas geolocalizaciones en paralelo
+        Promise.all([
+          this.getReverseGeocoding(startPosition[0], startPosition[1]).catch(() => null),
+          this.getReverseGeocoding(stopPosition[0], stopPosition[1]).catch(() => null)
+        ]).then(([startResult, endResult]) => {
+          // Construir tooltips con o sin direcciones
+          const startTooltip = startResult 
+            ? `<strong>START</strong><br>${startTime}<br><em>${startResult.address}</em>${startResult.state ? `<br><small>${startResult.state}</small>` : ''}`
+            : `<strong>START</strong><br>${startTime}`
+            
+          const endTooltip = endResult 
+            ? `<strong>END</strong><br>${endTime}<br><em>${endResult.address}</em>${endResult.state ? `<br><small>${endResult.state}</small>` : ''}`
+            : `<strong>END</strong><br>${endTime}`
+          
+          // AHORA SEGUIR CON EL FLUJO NORMAL - crear marcadores
+          if (!this.markers[id].flags) {
+            this.markers[id].flags = {
+              start: {},
+              stop: {},
+            }
+          }
+          
+          this.markers[id].flags.start = L.marker(startPosition, {
+            icon: this.generateFlag({ id, status: 'start' }),
+          })
+          this.markers[id].flags.start.bindTooltip(startTooltip, {
+            permanent: false,
+            direction: 'top',
+            offset: [0, -10]
+          })
+          this.markers[id].flags.start.addTo(this.map)
+          
+          this.markers[id].flags.stop = L.marker(stopPosition, {
+            icon: this.generateFlag({ id, status: 'stop' }),
+          })
+          this.markers[id].flags.stop.bindTooltip(endTooltip, {
+            permanent: false,
+            direction: 'top',
+            offset: [0, -10]
+          })
+          this.markers[id].flags.stop.addTo(this.map)
+        })
       }
     },
     centerOnDevice(id, zoom) {
@@ -457,6 +449,8 @@ export default defineComponent({
       const from = this.date[0]
       const to = this.date[1]
       console.log(`📅 Setting date range: ${new Date(from)} to ${new Date(to)}`)
+      console.log(`🔢 Raw timestamps - from: ${from}, to: ${to}`)
+      console.log(`🌐 Current URL: ${window.location.href}`)
       deviceMessagesStore.setTimestampFrom(from)
       deviceMessagesStore.setTimestampTo(to)
       console.log(`📡 Calling deviceMessagesStore.get()...`)
@@ -466,7 +460,10 @@ export default defineComponent({
         const render = await deviceMessagesStore.pollingGet()
         render()
       }
-      this.removeFlags(id)
+      // Only remove flags if they exist (avoid unnecessary cleanup on first load)
+      if (this.markers[id] && this.markers[id].flags) {
+        this.removeFlags(id)
+      }
       this.addFlags(id)
       if (this.params.needShowHarshEvents) {
         this.addHarshEventMarkers(id)
@@ -754,26 +751,20 @@ export default defineComponent({
       }
     },
     getSpeedBasedColor(speed) {
-      // Speed-based color mapping (mph) - Enhanced visual differentiation for high speeds
-      // Focus on highway speeds where monitoring is most critical
+      // Speed-based color mapping (mph) - New 3-tier system
       // Note: Input speed is assumed to be in km/h, so we convert to mph first
       const speedMph = speed * 0.621371
       
-      if (speedMph <= 5) {
-        return '#0066FF' // Blue - stopped/parking
-      } else if (speedMph <= 25) {
-        return '#00CC66' // Bright Green - city/residential
-      } else if (speedMph <= 45) {
-        return '#FFCC00' // Bright Yellow - arterial roads
-      } else if (speedMph <= 65) {
-        return '#FF6600' // Bright Orange - highway speeds
+      if (speedMph <= 45) {
+        return '#00CC66' // Green - 0-45 mph
       } else if (speedMph <= 85) {
-        return '#CC0066' // Magenta - high highway speeds
+        return '#FFCC00' // Yellow - 45-85 mph
       } else {
-        return '#990000' // Dark Red - excessive speeds
+        return '#FF0000' // Red - 85+ mph
       }
     },
     async getReverseGeocoding(lat, lon) {
+      console.log(`🌐 getReverseGeocoding called with: ${lat}, ${lon}`)
       try {
         // Use Nominatim (OpenStreetMap) free reverse geocoding service
         const response = await fetch(
@@ -1326,14 +1317,18 @@ export default defineComponent({
       }
     },
     removeFlags(id) {
+      console.log(`🚫 removeFlags called for device ${id}`)
       if (
         !this.markers[id] ||
         !this.markers[id].flags // ||
         // !(this.markers[id].flags.start instanceof L.Marker) ||
         // !(this.markers[id].flags.stop instanceof L.Marker)
       ) {
+        console.log(`🚫 removeFlags: No flags to remove for device ${id}`)
         return false
       }
+      
+      console.log(`🚫 removeFlags: Removing flags for device ${id}`)
       this.markers[id].flags.start.remove()
       this.markers[id].flags.stop.remove()
       this.markers[id].flags = undefined
@@ -1494,6 +1489,29 @@ export default defineComponent({
         this.markers[id].harshEvents = []
       }
       
+      // Clear existing tracks/routes from the map
+      if (this.tracks[id]) {
+        // Remove tail and overview tracks
+        if (this.tracks[id].tail && this.tracks[id].tail instanceof L.Polyline) {
+          this.tracks[id].tail.remove()
+          delete this.tracks[id].tail
+        }
+        if (this.tracks[id].overview && this.tracks[id].overview instanceof L.Polyline) {
+          this.tracks[id].overview.remove()
+          delete this.tracks[id].overview
+        }
+
+        // Remove main track (handles both regular polylines and layer groups)
+        if (this.tracks[id].remove) {
+          this.tracks[id].remove()
+        } else if (this.map.hasLayer(this.tracks[id])) {
+          this.map.removeLayer(this.tracks[id])
+        }
+        
+        // Reset track to empty object so updateOrInitDevice can recreate it
+        this.tracks[id] = {}
+      }
+      
       // Close any open popups related to this device
       if (this.map.trackPointPopup) {
         this.map.closePopup(this.map.trackPointPopup)
@@ -1502,7 +1520,7 @@ export default defineComponent({
         this.map.closePopup(this.map.harshEventPopup)
       }
       
-      console.log(`🧹 Cleared all markers for device ${id}`)
+      console.log(`🧹 Cleared all markers and tracks for device ${id}`)
     },
     addHarshEventMarkers(id) {
       if (!this.messages[id] || !this.messages[id].length) {
@@ -2253,41 +2271,91 @@ export default defineComponent({
         L.DomUtil.removeClass(this.map._container, 'crosshair-cursor-enabled')
       }
     },
-    async date() {
-      this.player.status = 'stop'
-      this.player.currentMsgTimestamp = null
-      
-      // Clear all existing markers (flags, harsh events, etc.) before loading new data
-      this.activeDevicesIDs.forEach((id) => {
-        this.clearAllMarkersForDevice(id)
-      })
-      
-      // Load data for all devices
-      const dataLoadPromises = this.activeDevicesIDs.map(async (id) => {
-        if (this.devicesStates[id].initStatus === true) {
-          await this.getDeviceData(id)
-        } else {
-          // Wait for device to be initialized
-          return new Promise((resolve) => {
-            const checkInit = () => {
-              if (this.devicesStates[id]?.initStatus === true) {
-                this.getDeviceData(id).then(resolve)
-              } else {
-                setTimeout(checkInit, 100)
-              }
-            }
-            setTimeout(checkInit, 100)
-          })
+    async date(newDate, oldDate) {
+      try {
+        console.log('🎯 DATE WATCHER CALLED')
+        console.log('📅 newDate:', newDate)
+        console.log('📅 oldDate:', oldDate)
+        console.log('📅 this.date:', this.date)
+        
+        this.player.status = 'stop'
+        this.player.currentMsgTimestamp = null
+        
+        // Simple check: if there's an oldDate, it's a date change
+        const isDateChange = oldDate && Array.isArray(oldDate) && oldDate.length > 0
+        
+        console.log('🔍 oldDate exists:', !!oldDate)
+        console.log('🔍 oldDate is array:', Array.isArray(oldDate))
+        console.log('🔍 oldDate length:', oldDate?.length)
+        console.log('🔍 isDateChange:', isDateChange)
+        
+        if (isDateChange) {
+        // This is a date change - FLUSH EVERYTHING AND RESTART COMPLETE FLOW
+        console.log('🔄 Date changed - TOTAL FLUSH AND RESTART')
+        
+        // Update URL with NEW date and reload using Vue Router
+        const fromSeconds = Math.floor(newDate[0] / 1000)
+        const toSeconds = Math.floor(newDate[1] / 1000)
+        
+        console.log('🔢 Converting dates:')
+        console.log('  newDate[0] (ms):', newDate[0], '→ seconds:', fromSeconds)
+        console.log('  newDate[1] (ms):', newDate[1], '→ seconds:', toSeconds)
+        
+        // Use Vue Router to navigate with new query parameters
+        const newQuery = {
+          ...this.$route.query,
+          from: fromSeconds,
+          to: toSeconds
         }
-      })
-      
-      // Wait for all data to load, then auto-center
-      await Promise.all(dataLoadPromises)
-      
-      // Auto-center and zoom to fit all tracks after data is loaded
-      setTimeout(() => {
-        this.autoFitAllTracks()
-      }, 500) // Small delay to ensure tracks are rendered
+        
+        console.log('🌐 New query:', newQuery)
+        
+        // FLUSH TOTAL - Update URL and reload page
+        const newUrl = this.$router.resolve({
+          path: this.$route.path,
+          params: this.$route.params,
+          query: newQuery
+        }).href
+        
+        console.log('🔄 About to reload with URL:', newUrl)
+        
+        // Update the URL first, then reload
+        window.history.replaceState({}, '', newUrl)
+        window.location.reload()
+      } else {
+        // This is initial load - use original logic
+        console.log('🚀 Initial load - using original logic')
+        
+        // Load data for all devices
+        const dataLoadPromises = this.activeDevicesIDs.map(async (id) => {
+          if (this.devicesStates[id].initStatus === true) {
+            await this.getDeviceData(id)
+          } else {
+            // Wait for device to be initialized
+            return new Promise((resolve) => {
+              const checkInit = () => {
+                if (this.devicesStates[id]?.initStatus === true) {
+                  this.getDeviceData(id).then(resolve)
+                } else {
+                  setTimeout(checkInit, 100)
+                }
+              }
+              setTimeout(checkInit, 100)
+            })
+          }
+        })
+        
+        // Wait for all data to load, then auto-center
+        await Promise.all(dataLoadPromises)
+        
+        // Auto-center and zoom to fit all tracks after data is loaded
+        setTimeout(() => {
+          this.autoFitAllTracks()
+        }, 500) // Small delay to ensure tracks are rendered
+      }
+      } catch (error) {
+        console.error('❌ Error in date watcher:', error)
+      }
     },
     colorModel(color) {
       /* color modal dialog returned new selected color for the device - save it to the store */
@@ -2441,6 +2509,7 @@ export default defineComponent({
       (this.geofenceCircle = null), // geofence circle
       (this.blackRockCityGeofence = null), // Black Rock City geofence reference
       (this.harshEventsCluster = null), // cluster group for harsh events
+
       /* create debounced function for processing messages and telemetry */
       (this.debouncedUpdateStateByMessages = debounce(this.updateStateByMessages, 100))
     this.debouncedUpdateStateByTelemetry = debounce(this.updateStateByTelemetry, 5)
