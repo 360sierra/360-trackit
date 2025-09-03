@@ -149,16 +149,51 @@
         <div class="speed-legend-container">
           <div class="speed-legend-title">Speed (mph)</div>
           <div class="speed-legend-item">
-            <div class="speed-color" style="background-color: #00CC66;"></div>
-            <span>0-45</span>
+            <div class="speed-color" style="background-color: #00CC00;"></div>
+            <span>0-65</span>
           </div>
           <div class="speed-legend-item">
             <div class="speed-color" style="background-color: #FFCC00;"></div>
-            <span>45-85</span>
+            <span>65-70</span>
           </div>
           <div class="speed-legend-item">
             <div class="speed-color" style="background-color: #FF0000;"></div>
-            <span>85+</span>
+            <span>70-80</span>
+          </div>
+          <div class="speed-legend-item">
+            <div class="speed-color" style="background-color: #003366;"></div>
+            <span>80+</span>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Harsh Events Legend -->
+      <div v-if="devices.length && params.needShowHarshEvents" class="floated harsh-events-legend">
+        <div class="harsh-events-legend-container">
+          <div class="harsh-events-legend-title">Harsh Events</div>
+          <div class="harsh-events-legend-item">
+            <div class="harsh-event-icon">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="white">
+                <path d="M11 21h-1l1-7H7.5c-.88 0-.33-.75-.31-.78C8.48 10.94 10.42 7.54 13.01 3h1l-1 7h3.51c.4 0 .62.19.4.66C15.39 14.25 13.51 17.98 11 21z"/>
+              </svg>
+            </div>
+            <span>Acceleration</span>
+          </div>
+          <div class="harsh-events-legend-item">
+            <div class="harsh-event-icon braking">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="white">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4 14H8V8h8v8z"/>
+              </svg>
+            </div>
+            <span>Braking</span>
+          </div>
+          <div class="harsh-events-legend-item">
+            <div class="harsh-event-icon cornering">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="white">
+                <path d="M12 6v3l4-4-4-4v3c-4.42 0-8 3.58-8 8 0 1.57.46 3.03 1.24 4.26L6.7 14.8c-.45-.83-.7-1.79-.7-2.8 0-3.31 2.69-6 6-6zm6.76 1.74L17.3 9.2c.44.84.7 1.79.7 2.8 0 3.31-2.69 6-6 6v-3l-4 4 4 4v-3c4.42 0 8-3.58 8-8 0-1.57-.46-3.03-1.24-4.26z"/>
+              </svg>
+            </div>
+            <span>Cornering</span>
           </div>
         </div>
       </div>
@@ -896,7 +931,7 @@ export default defineComponent({
 
 .speed-legend
   position: fixed
-  top: 250px
+  top: 350px
   right: 20px
   z-index: 1000
   pointer-events: auto
@@ -931,6 +966,57 @@ export default defineComponent({
   border: 1px solid rgba(0, 0, 0, 0.2)
 
 .speed-legend-item span
+  color: #333
+  font-weight: 500
+
+/* Harsh Events Legend Styles */
+.harsh-events-legend
+  position: fixed
+  top: 350px
+  right: 150px  // Positioned to the left of speed legend
+  z-index: 1000
+  pointer-events: auto
+
+.harsh-events-legend-container
+  background: rgba(255, 255, 255, 0.9)
+  border-radius: 8px
+  padding: 12px
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2)
+  font-size: 12px
+  min-width: 120px
+
+.harsh-events-legend-title
+  font-weight: bold
+  margin-bottom: 8px
+  text-align: center
+  color: #333
+
+.harsh-events-legend-item
+  display: flex
+  align-items: center
+  margin-bottom: 4px
+  
+  &:last-child
+    margin-bottom: 0
+
+.harsh-event-icon
+  width: 20px
+  height: 20px
+  border-radius: 50%
+  margin-right: 8px
+  border: 1px solid rgba(0, 0, 0, 0.2)
+  display: flex
+  align-items: center
+  justify-content: center
+  background-color: #FFC107  // Default amber for acceleration
+  
+  &.braking
+    background-color: #F44336  // Red for braking
+    
+  &.cornering
+    background-color: #9C27B0  // Purple for cornering
+
+.harsh-events-legend-item span
   color: #333
   font-weight: 500
 </style>

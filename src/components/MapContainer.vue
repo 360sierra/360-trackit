@@ -751,16 +751,18 @@ export default defineComponent({
       }
     },
     getSpeedBasedColor(speed) {
-      // Speed-based color mapping (mph) - New 3-tier system
+      // Speed-based color mapping (mph) - 4-tier system
       // Note: Input speed is assumed to be in km/h, so we convert to mph first
       const speedMph = speed * 0.621371
       
-      if (speedMph <= 45) {
-        return '#00CC66' // Green - 0-45 mph
-      } else if (speedMph <= 85) {
-        return '#FFCC00' // Yellow - 45-85 mph
+      if (speedMph <= 65) {
+        return '#00CC00' // Verde - 0-65 mph
+      } else if (speedMph <= 70) {
+        return '#FFCC00' // Amarillo - 65-70 mph
+      } else if (speedMph <= 80) {
+        return '#FF0000' // Rojo - 70-80 mph
       } else {
-        return '#FF0000' // Red - 85+ mph
+        return '#003366' // Azul oscuro - 80+ mph
       }
     },
     async getReverseGeocoding(lat, lon) {
@@ -2481,14 +2483,16 @@ export default defineComponent({
     },
     'params.needShowHarshEvents': function (newValue) {
       // Show or hide harsh event markers when setting changes
-      this.activeDevicesIDs.forEach((id) => {
-        if (newValue) {
-          // Show harsh events
+      if (newValue) {
+        // Show harsh events
+        this.activeDevicesIDs.forEach((id) => {
           if (this.messages[id] && this.messages[id].length > 0) {
             this.addHarshEventMarkers(id)
           }
-        } else {
-          // Hide harsh events
+        })
+      } else {
+        // Hide harsh events - clear all markers and clusters
+        this.activeDevicesIDs.forEach((id) => {
           if (this.markers[id] && this.markers[id].harshEvents) {
             this.markers[id].harshEvents.forEach(marker => {
               if (marker && this.harshEventsCluster.hasLayer(marker)) {
@@ -2497,8 +2501,13 @@ export default defineComponent({
             })
             this.markers[id].harshEvents = []
           }
+        })
+        
+        // Clear all remaining layers from the cluster to remove any lingering clusters
+        if (this.harshEventsCluster) {
+          this.harshEventsCluster.clearLayers()
         }
-      })
+      }
     },
   },
   created() {
