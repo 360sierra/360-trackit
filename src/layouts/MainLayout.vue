@@ -197,6 +197,22 @@
           </div>
         </div>
       </div>
+      
+      <!-- Crash Events Legend -->
+      <div v-if="devices.length && params.needShowCrashEvents" class="floated crash-events-legend">
+        <div class="crash-events-legend-container">
+          <div class="crash-events-legend-title">Crash Events</div>
+          <div class="crash-events-legend-item">
+            <div class="crash-event-icon">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="white">
+                <path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5H15l-1-2H10L9 5H6.5C5.84 5 5.28 5.42 5.08 6.01L3 12v7c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-7l-1.92-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z"/>
+                <path d="M12 8l-2 2h4l-2-2z" fill="#FFD700" opacity="0.8"/>
+              </svg>
+            </div>
+            <span>Vehicle Crash</span>
+          </div>
+        </div>
+      </div>
         <div v-if="!activeDevicesIDs.length && devices.length" class="floated no-devices">
           <span class="no-devices__message">You have no selected devices</span>
           <div style="margin-top: 15px">
@@ -306,6 +322,17 @@
                   <q-tooltip>Show harsh driving events (acceleration, braking, cornering)</q-tooltip>
                 </q-toggle>
               </q-item>
+              <q-item dense>
+                <q-toggle
+                  v-model="params.needShowCrashEvents"
+                  icon="mdi-car-crash"
+                  label="Crash events"
+                  :disable="!devices.length"
+                  @update:model-value="paramsChangeHandler"
+                >
+                  <q-tooltip>Show vehicle crash events</q-tooltip>
+                </q-toggle>
+              </q-item>
 
               <q-item class="within-iframe-hide" @click="exitHandler" clickable>
                 <q-item-section avatar class="q-pl-md">
@@ -386,6 +413,7 @@ export default defineComponent({
         needShowPlayer: false,
         needShowSpeedColors: true,
         needShowHarshEvents: false,
+        needShowCrashEvents: false,
       },
       selectedDevice: {
         id: null,
@@ -492,6 +520,10 @@ export default defineComponent({
         // Ensure needShowHarshEvents defaults to false if not set
         if (typeof this.params.needShowHarshEvents === 'undefined') {
           this.params.needShowHarshEvents = false
+        }
+        // Ensure needShowCrashEvents defaults to false if not set
+        if (typeof this.params.needShowCrashEvents === 'undefined') {
+          this.params.needShowCrashEvents = false
         }
       }
       /* init right drawer (telemetry) settings from localstorage */
@@ -1017,6 +1049,52 @@ export default defineComponent({
     background-color: #9C27B0  // Purple for cornering
 
 .harsh-events-legend-item span
+  color: #333
+  font-weight: 500
+
+/* Crash Events Legend Styles */
+.crash-events-legend
+  position: fixed
+  top: 520px  // Below harsh events legend with more spacing
+  right: 150px  // Same horizontal position as harsh events legend (left side)
+  z-index: 1000
+  pointer-events: auto
+
+.crash-events-legend-container
+  background: rgba(255, 255, 255, 0.9)
+  border-radius: 8px
+  padding: 12px
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2)
+  font-size: 12px
+  min-width: 120px
+  border: 2px solid #B71C1C
+
+.crash-events-legend-title
+  font-weight: bold
+  margin-bottom: 8px
+  text-align: center
+  color: #B71C1C
+
+.crash-events-legend-item
+  display: flex
+  align-items: center
+  margin-bottom: 4px
+  
+  &:last-child
+    margin-bottom: 0
+
+.crash-event-icon
+  width: 20px
+  height: 20px
+  border-radius: 50%
+  margin-right: 8px
+  border: 1px solid rgba(0, 0, 0, 0.2)
+  display: flex
+  align-items: center
+  justify-content: center
+  background-color: #B71C1C  // Dark red for crash events
+
+.crash-events-legend-item span
   color: #333
   font-weight: 500
 </style>

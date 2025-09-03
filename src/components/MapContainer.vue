@@ -468,6 +468,9 @@ export default defineComponent({
       if (this.params.needShowHarshEvents) {
         this.addHarshEventMarkers(id)
       }
+      if (this.params.needShowCrashEvents) {
+        this.addCrashEventMarkers(id)
+      }
       if (!deviceMessagesStore.messages.length) {
         console.log(`⚠️ No messages found, trying telemetry for device ${id}`)
         try {
@@ -1005,6 +1008,34 @@ export default defineComponent({
         })
         this.map.addLayer(this.harshEventsCluster)
 
+        // Initialize crash events cluster group with proper configuration
+        this.crashEventsCluster = L.markerClusterGroup({
+          maxClusterRadius: 60,
+          disableClusteringAtZoom: 15, // FIX: Disable clustering at lower zoom level
+          spiderfyOnMaxZoom: true,
+          showCoverageOnHover: false,
+          zoomToBoundsOnClick: false, // FIX: Don't auto-zoom when clicking cluster
+          removeOutsideVisibleBounds: false, // FIX: Keep markers visible when zooming
+          animateAddingMarkers: false, // FIX: Disable animation to prevent disappearing
+          iconCreateFunction: function(cluster) {
+            const count = cluster.getChildCount()
+            
+            let className = 'marker-cluster-small'
+            if (count > 10) {
+              className = 'marker-cluster-large'
+            } else if (count > 5) {
+              className = 'marker-cluster-medium'
+            }
+            
+            return L.divIcon({
+              html: `<div><span>${count}</span></div>`,
+              className: `marker-cluster crash-cluster ${className}`,
+              iconSize: L.point(40, 40)
+            })
+          }
+        })
+        this.map.addLayer(this.crashEventsCluster)
+
         // Map is ready for track initialization
         this.map.addEventListener('zoom', (e) => {
           if (!e.flyTo) {
@@ -1490,6 +1521,16 @@ export default defineComponent({
         })
         this.markers[id].harshEvents = []
       }
+
+      // Clear crash event markers
+      if (this.markers[id] && this.markers[id].crashEvents) {
+        this.markers[id].crashEvents.forEach(marker => {
+          if (marker && this.crashEventsCluster.hasLayer(marker)) {
+            this.crashEventsCluster.removeLayer(marker)
+          }
+        })
+        this.markers[id].crashEvents = []
+      }
       
       // Clear existing tracks/routes from the map
       if (this.tracks[id]) {
@@ -1520,6 +1561,9 @@ export default defineComponent({
       }
       if (this.map.harshEventPopup) {
         this.map.closePopup(this.map.harshEventPopup)
+      }
+      if (this.map.crashEventPopup) {
+        this.map.closePopup(this.map.crashEventPopup)
       }
       
       console.log(`🧹 Cleared all markers and tracks for device ${id}`)
@@ -1596,6 +1640,60 @@ export default defineComponent({
 
       console.log(`🚨 Added ${this.markers[id].harshEvents.length} harsh event markers for device ${id}`)
     },
+    addCrashEventMarkers(id) {
+      if (!this.messages[id] || !this.messages[id].length) {
+        return
+      }
+
+      // Initialize crash events array for this device if not exists
+      if (!this.markers[id]) {
+        return
+      }
+      if (!this.markers[id].crashEvents) {
+        this.markers[id].crashEvents = []
+      }
+
+      // Clear existing crash event markers from cluster
+      this.markers[id].crashEvents.forEach(marker => {
+        if (marker && this.crashEventsCluster.hasLayer(marker)) {
+          this.crashEventsCluster.removeLayer(marker)
+        }
+      })
+      this.markers[id].crashEvents = []
+
+      // Debug: Count crash events
+      if (this.messages[id].length > 0) {
+        const crashEventMessages = this.messages[id].filter(msg => msg['event.enum'] === 247 && msg['crash.event'] === true)
+        console.log(`💥 Found ${crashEventMessages.length} crash events for device ${id}`)
+      }
+
+      // Search for crash events in messages
+      this.messages[id].forEach((message, index) => {
+        const crashEvents = this.detectCrashEvents(message)
+        
+        crashEvents.forEach(event => {
+          if (message['position.latitude'] && message['position.longitude']) {
+            // Create crash marker at the event location
+            
+            const marker = L.marker([message['position.latitude'], message['position.longitude']], {
+              icon: this.generateCrashEventIcon(),
+              zIndexOffset: 1100 // Ensure crash events appear above harsh events
+            })
+
+            // Add click handler for crash event details
+            marker.on('click', () => {
+              this.showCrashEventPopup([message['position.latitude'], message['position.longitude']], message, event)
+            })
+
+            // Add to cluster group and store reference
+            this.crashEventsCluster.addLayer(marker)
+            this.markers[id].crashEvents.push(marker)
+          }
+        })
+      })
+
+      console.log(`💥 Added ${this.markers[id].crashEvents.length} crash event markers for device ${id}`)
+    },
     detectHarshEvents(message) {
       const events = []
       
@@ -1653,6 +1751,32 @@ export default defineComponent({
 
       return events
     },
+    detectCrashEvents(message) {
+      const events = []
+      
+      // Check for crash events (event.enum = 247 and crash.event = true)
+      
+      // Check if this is a crash event message
+      // Must have event.enum = 247 and crash.event = true to be a crash event
+      if (message['event.enum'] !== 247 || message['crash.event'] !== true) {
+        return events // Not a crash event
+      }
+      
+      // Crash event detected
+      
+      // Create crash event object (no duration for crash events)
+      events.push({
+        type: 'crash',
+        field: 'crash.event',
+        value: true,
+        severity: 'critical',
+        details: 'Vehicle crash event detected'
+      })
+      
+      console.log('💥 Vehicle crash detected')
+
+      return events
+    },
     generateHarshEventIcon(eventType) {
       // Material UI icons for different event types
       const eventConfig = {
@@ -1702,6 +1826,39 @@ export default defineComponent({
         iconSize: [26, 26],
         iconAnchor: [13, 13],
         popupAnchor: [0, -13]
+      })
+    },
+    generateCrashEventIcon() {
+      // Material UI car crash icon configuration
+      const config = {
+        color: '#B71C1C', // Dark Red for critical severity
+        // Material UI DirectionsCar icon with crash effect
+        icon: `<svg viewBox="0 0 24 24" width="14" height="14" fill="white">
+          <path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5H15l-1-2H10L9 5H6.5C5.84 5 5.28 5.42 5.08 6.01L3 12v7c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-7l-1.92-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z"/>
+          <path d="M12 8l-2 2h4l-2-2z" fill="#FFD700" opacity="0.8"/>
+        </svg>`
+      }
+
+      return L.divIcon({
+        className: 'crash-event-marker',
+        html: `
+          <div style="
+            width: 28px;
+            height: 28px;
+            background-color: ${config.color};
+            border: 2px solid white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+          ">
+            ${config.icon}
+          </div>
+        `,
+        iconSize: [28, 28],
+        iconAnchor: [14, 14],
+        popupAnchor: [0, -14]
       })
     },
     showHarshEventPopup(latlng, message, event) {
@@ -1764,6 +1921,53 @@ export default defineComponent({
         autoClose: true,
         closeOnClick: true,
         className: 'harsh-event-popup'
+      })
+        .setLatLng(latlng)
+        .setContent(popupContent)
+        .openOn(this.map)
+    },
+    showCrashEventPopup(latlng, message, event) {
+      // Close any existing popup
+      if (this.map.crashEventPopup) {
+        this.map.closePopup(this.map.crashEventPopup)
+      }
+
+      const timestamp = message.timestamp ? new Date(message.timestamp * 1000).toLocaleString() : 'N/A'
+      
+      // Get crash event icon
+      const crashIcon = `<svg viewBox="0 0 24 24" width="20" height="20" fill="#B71C1C" style="vertical-align: middle;">
+        <path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5H15l-1-2H10L9 5H6.5C5.84 5 5.28 5.42 5.08 6.01L3 12v7c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-7l-1.92-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z"/>
+        <path d="M12 8l-2 2h4l-2-2z" fill="#FFD700" opacity="0.8"/>
+      </svg>`
+
+      const popupContent = `
+        <div style="min-width: 220px; font-family: Arial, sans-serif;">
+          <div style="display: flex; align-items: center; margin-bottom: 10px; padding-bottom: 8px; border-bottom: 2px solid #B71C1C;">
+            ${crashIcon}
+            <strong style="margin-left: 8px; color: #B71C1C; font-size: 16px;">Vehicle Crash Event</strong>
+          </div>
+          
+          <div style="margin-bottom: 8px;">
+            <strong style="color: #333;">📅 Timestamp:</strong><br>
+            <span style="color: #666; font-size: 13px;">${timestamp}</span>
+          </div>
+          
+          <div style="margin-bottom: 8px;">
+            <strong style="color: #333;">📍 Coordinates:</strong><br>
+            <span style="color: #666; font-size: 13px;">
+              Lat: ${message['position.latitude']?.toFixed(6) || 'N/A'}<br>
+              Lng: ${message['position.longitude']?.toFixed(6) || 'N/A'}
+            </span>
+          </div>
+        </div>
+      `
+
+      this.map.crashEventPopup = L.popup({
+        className: 'crash-event-popup',
+        maxWidth: 300,
+        closeButton: true,
+        autoClose: false,
+        closeOnEscapeKey: true
       })
         .setLatLng(latlng)
         .setContent(popupContent)
@@ -2509,6 +2713,34 @@ export default defineComponent({
         }
       }
     },
+    'params.needShowCrashEvents': function (newValue) {
+      // Show or hide crash event markers when setting changes
+      if (newValue) {
+        // Show crash events
+        this.activeDevicesIDs.forEach((id) => {
+          if (this.messages[id] && this.messages[id].length > 0) {
+            this.addCrashEventMarkers(id)
+          }
+        })
+      } else {
+        // Hide crash events - clear all markers and clusters
+        this.activeDevicesIDs.forEach((id) => {
+          if (this.markers[id] && this.markers[id].crashEvents) {
+            this.markers[id].crashEvents.forEach(marker => {
+              if (marker && this.crashEventsCluster.hasLayer(marker)) {
+                this.crashEventsCluster.removeLayer(marker)
+              }
+            })
+            this.markers[id].crashEvents = []
+          }
+        })
+        
+        // Clear all remaining layers from the cluster to remove any lingering clusters
+        if (this.crashEventsCluster) {
+          this.crashEventsCluster.clearLayers()
+        }
+      }
+    },
   },
   created() {
     /* init map staff here, so that it wasn't reactive */
@@ -2518,6 +2750,7 @@ export default defineComponent({
       (this.geofenceCircle = null), // geofence circle
       (this.blackRockCityGeofence = null), // Black Rock City geofence reference
       (this.harshEventsCluster = null), // cluster group for harsh events
+      (this.crashEventsCluster = null), // cluster group for crash events
 
       /* create debounced function for processing messages and telemetry */
       (this.debouncedUpdateStateByMessages = debounce(this.updateStateByMessages, 100))
@@ -2582,6 +2815,61 @@ export default defineComponent({
 .marker-cluster-small {
   background-color: rgba(255, 193, 7, 0.8);
   border: 2px solid #FFC107;
+}
+
+/* Crash events cluster styling */
+.crash-cluster.marker-cluster-small {
+  background-color: rgba(183, 28, 28, 0.8);
+  border: 2px solid #B71C1C;
+}
+
+.crash-cluster.marker-cluster-medium {
+  background-color: rgba(183, 28, 28, 0.8);
+  border: 2px solid #B71C1C;
+}
+
+.crash-cluster.marker-cluster-large {
+  background-color: rgba(183, 28, 28, 0.8);
+  border: 2px solid #B71C1C;
+}
+
+/* Crash event popup styling */
+.crash-event-popup .leaflet-popup-content-wrapper {
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(183, 28, 28, 0.3);
+  border: 2px solid #B71C1C;
+  background: #FFEBEE;
+}
+
+.crash-event-popup .leaflet-popup-content {
+  margin: 12px 16px;
+  line-height: 1.4;
+}
+
+.crash-event-popup .leaflet-popup-tip {
+  background: #FFEBEE;
+  border: 2px solid #B71C1C;
+}
+
+/* Crash event marker styling */
+.crash-event-marker {
+  border-radius: 50%;
+}
+
+/* Pulse animation for crash event markers */
+@keyframes crashPulse {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 0.7;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
 }
 
 .marker-cluster-medium {
