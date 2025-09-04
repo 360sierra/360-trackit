@@ -592,7 +592,16 @@ export default defineComponent({
           this.getFromStore({ store: this.$q.sessionStorage, name: 'telemetry' }),
         daterange =
           this.$route.query.daterange ||
-          this.getFromStore({ store: this.$q.sessionStorage, name: 'daterange' })
+          this.getFromStore({ store: this.$q.sessionStorage, name: 'daterange' }),
+        speed =
+          this.$route.query.speed ||
+          this.getFromStore({ store: this.$q.sessionStorage, name: 'speed' }),
+        harsh =
+          this.$route.query.harsh ||
+          this.getFromStore({ store: this.$q.sessionStorage, name: 'harsh' }),
+        crash =
+          this.$route.query.crash ||
+          this.getFromStore({ store: this.$q.sessionStorage, name: 'crash' })
       if (from && to) {
         /* init date from url parameters, if provided */
         this.setDate([from * 1000, to * 1000])
@@ -648,6 +657,33 @@ export default defineComponent({
           this.params.needShowInvalidPositionMessages = true
         } else if (invalid === 'false') {
           this.params.needShowInvalidPositionMessages = false
+        }
+        this.paramsChangeHandler()
+      }
+      if (speed) {
+        this.setToStore({ store: this.$q.sessionStorage, name: 'speed', value: speed })
+        if (speed === 'true') {
+          this.params.needShowSpeedColors = true
+        } else if (speed === 'false') {
+          this.params.needShowSpeedColors = false
+        }
+        this.paramsChangeHandler()
+      }
+      if (harsh) {
+        this.setToStore({ store: this.$q.sessionStorage, name: 'harsh', value: harsh })
+        if (harsh === 'true') {
+          this.params.needShowHarshEvents = true
+        } else if (harsh === 'false') {
+          this.params.needShowHarshEvents = false
+        }
+        this.paramsChangeHandler()
+      }
+      if (crash) {
+        this.setToStore({ store: this.$q.sessionStorage, name: 'crash', value: crash })
+        if (crash === 'true') {
+          this.params.needShowCrashEvents = true
+        } else if (crash === 'false') {
+          this.params.needShowCrashEvents = false
         }
         this.paramsChangeHandler()
       }
