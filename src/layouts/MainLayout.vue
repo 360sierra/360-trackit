@@ -102,7 +102,7 @@
         <div class="floated label">
           <img
             src="icons/shaka-favicon.jpeg"
-            alt="Track it!"
+            alt="FleetTracker 360"
             style="height: 40px; margin-top: 3px; display: inline-block"
           />
           <div class="q-toolbar-title" style="color: rgb(51, 51, 51); display: inline-block">

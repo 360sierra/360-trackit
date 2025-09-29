@@ -748,7 +748,7 @@ export default defineComponent({
           `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=18&addressdetails=1`,
           {
             headers: {
-              'User-Agent': 'TrackIt-App/1.0 (Vehicle Tracking Application)'
+              'User-Agent': 'FleetTracker360-App/1.0 (Vehicle Tracking Application)'
             }
           }
         )

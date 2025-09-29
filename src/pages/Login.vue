@@ -2,7 +2,7 @@
   <div class="login-page window-height window-width bg-light column items-center no-wrap">
 
     <div class="login-back flex items-center justify-center">
-      <div class="login-code flex items-center justify-center">Track it!</div>
+      <div class="login-code flex items-center justify-center">FleetTracker 360</div>
     </div>
     <div style="width: 100%; height: 50vh; background-color: white" />
     <div v-if="!$route.params.token" style="position: absolute; top: 50%">
