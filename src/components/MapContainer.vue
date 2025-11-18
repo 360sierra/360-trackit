@@ -1037,22 +1037,23 @@ export default defineComponent({
           OpenTopoMap: opentopo,
         }
         L.control.layers(baseMaps, { 'OpenStreetMaps (0.5)': osmtransp }).addTo(this.map)
-        L.control
-          .polylineMeasure({
-            position: 'topleft',
-            showBearings: false,
-            clearMeasurementsOnStop: false,
-            showUnitControl: false,
-            showClearControl: true,
-            measureControlTitleOn: 'Turn on ruler',
-            measureControlTitleOff: 'Turn off ruler',
-            tooltipTextFinish: 'Click to <b>finish line</b><br>',
-            tooltipTextDelete: 'Press SHIFT-key and click to <b>delete point</b>',
-            tooltipTextMove: 'Click and drag to <b>move point</b><br>',
-            tooltipTextResume: '<br>Press CTRL-key and click to <b>resume line</b>',
-            tooltipTextAdd: 'Press CTRL-key and click to <b>add point</b>',
-          })
-          .addTo(this.map)
+        // PolylineMeasure control disabled - buttons hidden per user request
+        // L.control
+        //   .polylineMeasure({
+        //     position: 'topleft',
+        //     showBearings: false,
+        //     clearMeasurementsOnStop: false,
+        //     showUnitControl: false,
+        //     showClearControl: false,
+        //     measureControlTitleOn: 'Turn on ruler',
+        //     measureControlTitleOff: 'Turn off ruler',
+        //     tooltipTextFinish: 'Click to <b>finish line</b><br>',
+        //     tooltipTextDelete: 'Press SHIFT-key and click to <b>delete point</b>',
+        //     tooltipTextMove: 'Click and drag to <b>move point</b><br>',
+        //     tooltipTextResume: '<br>Press CTRL-key and click to <b>resume line</b>',
+        //     tooltipTextAdd: 'Press CTRL-key and click to <b>add point</b>',
+        //   })
+        //   .addTo(this.map)
       }
     },
     mapClickHandler(e) {
@@ -2931,6 +2932,14 @@ export default defineComponent({
   .leaflet-control-zoom-out
     border-bottom-left-radius: 3px
     border-bottom-right-radius: 3px
+
+.leaflet-control-polyline-measure,
+.leaflet-control-polyline-measure button,
+.leaflet-control-polyline-measure .leaflet-control,
+.leaflet-bar-part.leaflet-bar-part-single,
+.leaflet-control-polyline-measure .leaflet-bar
+  display: none !important
+  visibility: hidden !important
 .my-flag-icon__inner
   font-size: 35px
   position: relative

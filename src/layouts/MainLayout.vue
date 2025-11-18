@@ -145,71 +145,77 @@
             @click:customButton="initDateFromTelemetry"
           />
         </div>
-              <div v-if="devices.length && params.needShowSpeedColors" class="floated speed-legend">
-        <div class="speed-legend-container">
-          <div class="speed-legend-title">Speed (mph)</div>
-          <div class="speed-legend-item">
-            <div class="speed-color" style="background-color: #00CC00;"></div>
-            <span>0-65</span>
-          </div>
-          <div class="speed-legend-item">
-            <div class="speed-color" style="background-color: #FFCC00;"></div>
-            <span>65-70</span>
-          </div>
-          <div class="speed-legend-item">
-            <div class="speed-color" style="background-color: #FF0000;"></div>
-            <span>70-80</span>
-          </div>
-          <div class="speed-legend-item">
-            <div class="speed-color" style="background-color: #003366;"></div>
-            <span>80+</span>
-          </div>
-        </div>
-      </div>
-      
-      <!-- Harsh Events Legend -->
-      <div v-if="devices.length && params.needShowHarshEvents" class="floated harsh-events-legend">
-        <div class="harsh-events-legend-container">
-          <div class="harsh-events-legend-title">Harsh Events</div>
-          <div class="harsh-events-legend-item">
-            <div class="harsh-event-icon">
-              <svg viewBox="0 0 24 24" width="14" height="14" fill="white">
-                <path d="M11 21h-1l1-7H7.5c-.88 0-.33-.75-.31-.78C8.48 10.94 10.42 7.54 13.01 3h1l-1 7h3.51c.4 0 .62.19.4.66C15.39 14.25 13.51 17.98 11 21z"/>
-              </svg>
+      <!-- Unified Legends Container -->
+      <div v-if="devices.length && hasActiveLegends" class="floated unified-legend-container">
+        <div class="unified-legend-wrapper">
+          <!-- Speed Legend -->
+          <div v-if="params.needShowSpeedColors" class="legend-section">
+            <div class="speed-legend-container">
+              <div class="speed-legend-title">Speed (mph)</div>
+              <div class="speed-legend-item">
+                <div class="speed-color" style="background-color: #00CC00;"></div>
+                <span>0-65</span>
+              </div>
+              <div class="speed-legend-item">
+                <div class="speed-color" style="background-color: #FFCC00;"></div>
+                <span>65-70</span>
+              </div>
+              <div class="speed-legend-item">
+                <div class="speed-color" style="background-color: #FF0000;"></div>
+                <span>70-80</span>
+              </div>
+              <div class="speed-legend-item">
+                <div class="speed-color" style="background-color: #003366;"></div>
+                <span>80+</span>
+              </div>
             </div>
-            <span>Acceleration</span>
           </div>
-          <div class="harsh-events-legend-item">
-            <div class="harsh-event-icon braking">
-              <svg viewBox="0 0 24 24" width="14" height="14" fill="white">
-                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4 14H8V8h8v8z"/>
-              </svg>
+          
+          <!-- Harsh Events Legend -->
+          <div v-if="params.needShowHarshEvents" class="legend-section">
+            <div class="harsh-events-legend-container">
+              <div class="harsh-events-legend-title">Harsh Events</div>
+              <div class="harsh-events-legend-item">
+                <div class="harsh-event-icon">
+                  <svg viewBox="0 0 24 24" width="14" height="14" fill="white">
+                    <path d="M11 21h-1l1-7H7.5c-.88 0-.33-.75-.31-.78C8.48 10.94 10.42 7.54 13.01 3h1l-1 7h3.51c.4 0 .62.19.4.66C15.39 14.25 13.51 17.98 11 21z"/>
+                  </svg>
+                </div>
+                <span>Acceleration</span>
+              </div>
+              <div class="harsh-events-legend-item">
+                <div class="harsh-event-icon braking">
+                  <svg viewBox="0 0 24 24" width="14" height="14" fill="white">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4 14H8V8h8v8z"/>
+                  </svg>
+                </div>
+                <span>Braking</span>
+              </div>
+              <div class="harsh-events-legend-item">
+                <div class="harsh-event-icon cornering">
+                  <svg viewBox="0 0 24 24" width="14" height="14" fill="white">
+                    <path d="M12 6v3l4-4-4-4v3c-4.42 0-8 3.58-8 8 0 1.57.46 3.03 1.24 4.26L6.7 14.8c-.45-.83-.7-1.79-.7-2.8 0-3.31 2.69-6 6-6zm6.76 1.74L17.3 9.2c.44.84.7 1.79.7 2.8 0 3.31-2.69 6-6 6v-3l-4 4 4 4v-3c4.42 0 8-3.58 8-8 0-1.57-.46-3.03-1.24-4.26z"/>
+                  </svg>
+                </div>
+                <span>Cornering</span>
+              </div>
             </div>
-            <span>Braking</span>
           </div>
-          <div class="harsh-events-legend-item">
-            <div class="harsh-event-icon cornering">
-              <svg viewBox="0 0 24 24" width="14" height="14" fill="white">
-                <path d="M12 6v3l4-4-4-4v3c-4.42 0-8 3.58-8 8 0 1.57.46 3.03 1.24 4.26L6.7 14.8c-.45-.83-.7-1.79-.7-2.8 0-3.31 2.69-6 6-6zm6.76 1.74L17.3 9.2c.44.84.7 1.79.7 2.8 0 3.31-2.69 6-6 6v-3l-4 4 4 4v-3c4.42 0 8-3.58 8-8 0-1.57-.46-3.03-1.24-4.26z"/>
-              </svg>
+          
+          <!-- Crash Events Legend -->
+          <div v-if="params.needShowCrashEvents" class="legend-section">
+            <div class="crash-events-legend-container">
+              <div class="crash-events-legend-title">Crash Events</div>
+              <div class="crash-events-legend-item">
+                <div class="crash-event-icon">
+                  <svg viewBox="0 0 24 24" width="14" height="14" fill="white">
+                    <path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5H15l-1-2H10L9 5H6.5C5.84 5 5.28 5.42 5.08 6.01L3 12v7c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-7l-1.92-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z"/>
+                    <path d="M12 8l-2 2h4l-2-2z" fill="#FFD700" opacity="0.8"/>
+                  </svg>
+                </div>
+                <span>Vehicle Crash</span>
+              </div>
             </div>
-            <span>Cornering</span>
-          </div>
-        </div>
-      </div>
-      
-      <!-- Crash Events Legend -->
-      <div v-if="devices.length && params.needShowCrashEvents" class="floated crash-events-legend">
-        <div class="crash-events-legend-container">
-          <div class="crash-events-legend-title">Crash Events</div>
-          <div class="crash-events-legend-item">
-            <div class="crash-event-icon">
-              <svg viewBox="0 0 24 24" width="14" height="14" fill="white">
-                <path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5H15l-1-2H10L9 5H6.5C5.84 5 5.28 5.42 5.08 6.01L3 12v7c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-7l-1.92-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z"/>
-                <path d="M12 8l-2 2h4l-2-2z" fill="#FFD700" opacity="0.8"/>
-              </svg>
-            </div>
-            <span>Vehicle Crash</span>
           </div>
         </div>
       </div>
@@ -452,6 +458,14 @@ export default defineComponent({
       set(date) {
         this.setDate(date)
       },
+    },
+    hasActiveLegends() {
+      /* return true if at least one legend option is active */
+      return (
+        this.params.needShowSpeedColors ||
+        this.params.needShowHarshEvents ||
+        this.params.needShowCrashEvents
+      )
     },
   },
   methods: {
@@ -966,6 +980,7 @@ export default defineComponent({
   &.menu
     top: 5px
     left: 10px
+    display: none !important
 
   &.telemetry
     top: 5px
@@ -978,7 +993,8 @@ export default defineComponent({
     right: 10px
   &.date
     top: 60px
-    right: 10px
+    left: 50%
+    transform: translateX(-50%)
     background-color: white
     padding: 1px
     border-radius: 3px
@@ -997,20 +1013,33 @@ export default defineComponent({
   &.white-background
     background: rgba(255,255,255,0.3)
 
-.speed-legend
+/* Unified Legend Container */
+.unified-legend-container
   position: fixed
   top: 350px
   right: 20px
   z-index: 1000
   pointer-events: auto
 
-.speed-legend-container
+.unified-legend-wrapper
   background: rgba(255, 255, 255, 0.9)
   border-radius: 8px
   padding: 12px
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2)
+  display: flex
+  flex-direction: column
+  gap: 12px
+  min-width: 120px
+
+.legend-section
+  &:not(:last-child)
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1)
+    padding-bottom: 12px
+    margin-bottom: 0
+
+/* Speed Legend Styles */
+.speed-legend-container
   font-size: 12px
-  min-width: 100px
 
 .speed-legend-title
   font-weight: bold
@@ -1038,20 +1067,8 @@ export default defineComponent({
   font-weight: 500
 
 /* Harsh Events Legend Styles */
-.harsh-events-legend
-  position: fixed
-  top: 350px
-  right: 150px  // Positioned to the left of speed legend
-  z-index: 1000
-  pointer-events: auto
-
 .harsh-events-legend-container
-  background: rgba(255, 255, 255, 0.9)
-  border-radius: 8px
-  padding: 12px
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2)
   font-size: 12px
-  min-width: 120px
 
 .harsh-events-legend-title
   font-weight: bold
@@ -1089,21 +1106,8 @@ export default defineComponent({
   font-weight: 500
 
 /* Crash Events Legend Styles */
-.crash-events-legend
-  position: fixed
-  top: 520px  // Below harsh events legend with more spacing
-  right: 150px  // Same horizontal position as harsh events legend (left side)
-  z-index: 1000
-  pointer-events: auto
-
 .crash-events-legend-container
-  background: rgba(255, 255, 255, 0.9)
-  border-radius: 8px
-  padding: 12px
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2)
   font-size: 12px
-  min-width: 120px
-  border: 2px solid #B71C1C
 
 .crash-events-legend-title
   font-weight: bold
